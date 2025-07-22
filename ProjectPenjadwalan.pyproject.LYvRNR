@@ -9,8 +9,6 @@
         "qml/Constants.qml",
         "qml/qmldir",
         "qml/MataKuliah.qml",
-        "qml/MataKuliahPage.ui.qml",
-        "qml/RuanganPage.ui.qml",
-        "qml/WaktuPage.ui.qml"
+        "qml/MataKuliahPage.ui.qml"
     ]
 }

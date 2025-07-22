@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "myapp"
+dynamic = ["version"]
+license = ""
+
+[tool.hatch.version]
+path = "myapp/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/myapp",
+]
