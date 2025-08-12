@@ -8,6 +8,9 @@ a = Analysis(
     datas=[
         ('qml/*', 'qml'),
         ('assets/*', 'assets'),
+        ('fonts/*', 'fonts'),
+        ('icons/*', 'helpers'),
+        ('helpers/*', 'helpers'),
     ],
     hiddenimports=[],
     hookspath=[],

@@ -11,8 +11,15 @@ from PySide6.QtCore import QObject, Signal, Slot
 if __name__ == "__main__":
     app = QGuiApplication(sys.argv)
     engine = QQmlApplicationEngine()
+    
+    # Tentukan path ke direktori yang berisi modul QML Anda
+    qml_dir = Path(__file__).resolve().parent / "qml"
 
-    qml_file = Path(__file__).resolve().parent / "qml/main.qml"
+    # Beritahu engine untuk mencari modul di dalam direktori 'qml/'
+    engine.addImportPath(str(qml_dir))
+
+    # Muat file Main.qml dari direktori tersebut
+    qml_file = qml_dir / "Main.qml"
     engine.load(qml_file)
 
     if not engine.rootObjects():
