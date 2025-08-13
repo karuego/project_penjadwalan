@@ -10,7 +10,8 @@ var icons = {
     "search":           "\uE8B6",
     "settings":         "\uE8B8",
     "close":            "\uE5CD",
-    "check":            "\uE5CA"
+    "check":            "\uE5CA",
+    "delete":           "\ue872",
 }
 
 function get(name) {

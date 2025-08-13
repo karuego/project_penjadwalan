@@ -7,11 +7,10 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine, qmlRegisterType
 from PySide6.QtCore import QObject, Signal, Slot
 
-
 if __name__ == "__main__":
     app = QGuiApplication(sys.argv)
     engine = QQmlApplicationEngine()
-    
+
     # Tentukan path ke direktori yang berisi modul QML Anda
     qml_dir = Path(__file__).resolve().parent / "qml"
 

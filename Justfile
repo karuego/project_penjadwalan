@@ -1,5 +1,7 @@
-run-py:
+run: py
+
+py:
 	@python main.py
 
-run-qt:
-	@qml6 -I qml "qml/Main.qml"
+qt:
+	@watchexec -w qml -r -- qml6 -I qml "qml/Main.qml"

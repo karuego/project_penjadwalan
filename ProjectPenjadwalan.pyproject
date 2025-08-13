@@ -1,8 +1,26 @@
 {
     "files": [
         "main.py",
-        "qml/main.qml",
-        "qml/DosenPage.ui.qml",
-        "qml/HomePage.ui.qml"
+        "qml/Main.qml",
+        "qml/Theme/qmldir",
+        "qml/Theme/AppTheme.qml",
+        "qml/components/HoverButton.qml",
+        "qml/components/Icon.qml",
+        "qml/components/IconButton.qml",
+        "qml/helpers/qmldir",
+        "qml/helpers/MaterialIcons.js",
+        "qml/helpers/MaterialIcons.qml",
+        "qml/pages/HomePage.qml",
+        "qml/pages/PengajarPage.qml",
+        "qml/pages/TambahPengajarPage.qml",
+        "qml/pages/MataKuliahPage.qml",
+        "qml/pages/TambahMataKuliahPage.qml",
+        "qml/pages/RuanganPage.qml",
+        "qml/pages/TambahRuanganPage.qml",
+        "qml/pages/WaktuPage.qml",
+        "qml/pages/TambahWaktuPage.qml",
+        "qml/pages/BuatJadwalPage.qml",
+        "qml/pages/JadwalTeoriPage.qml",
+        "qml/pages/JadwalPraktekPage.qml",
     ]
 }

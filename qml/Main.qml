@@ -5,8 +5,9 @@ import QtQuick.Layouts
 import QtQuick.Controls.Material
 
 import Theme 1.0
+import "helpers/MaterialIcons.js" as MIcons
+import "components"
 
-// Window {
 ApplicationWindow {
     id: window
     visible: true
@@ -15,38 +16,60 @@ ApplicationWindow {
     title: qsTr("Aplikasi Penjadwalan w/ Simulated Annealing")
     Material.theme: Material.Light
 
-    // 1. Muat font menggunakan FontLoader
-    /*FontLoader {
-        id: materialFontLoader
-        source: "fonts/MaterialSymbols.ttf" // Path relatif ke file font
-    }*/
+    header: ToolBar {
+        HoverButton {
+            iconName: "arrow_back"
+            hoverText: "Kembali"
 
-    // 2. Gunakan font yang sudah dimuat
-    /*Text {
-        anchors.horizontalCenter: parent.horizontalCenter
+            anchors.margins: 10
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
 
-        // Gunakan nama font dari FontLoader setelah statusnya "Ready"
-        // Properti .name akan berisi nama family font, misal: "Material Symbols Outlined"
-        // font.family: materialFontLoader.name
-        font.family: AppTheme.materialFont
-        // font.pixelSize: 48
-        font.pixelSize: 60
-        // color: "darkgreen"
-        color: AppTheme.primaryColor // Gunakan juga warna dari theme
+            // Tampilkan tombol ini hanya jika ada halaman untuk kembali
+            visible: stackView.depth > 1
+            onClicked: stackView.pop()
+        }
 
-        // Pastikan FontLoader selesai memuat sebelum menampilkan teks
-        // text: materialFontLoader.status == FontLoader.Ready ? "verified_user" : ""
-        text: "home"
-    }*/
+        Label {
+            // Menampilkan judul halaman aktif
+            text: stackView.currentItem.title
 
+            // anchors.centerIn: parent
+            anchors.fill: parent
+            horizontalAlignment: Qt.AlignHCenter
+            verticalAlignment: Qt.AlignVCenter
+
+            elide: Label.ElideRight
+            font.pixelSize: 20
+        }
+
+        // Tombol di pojok kanan untuk info
+        ToolButton {
+            text: "help"
+            font.pixelSize: 24
+            font.family: AppTheme.materialFont
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            onClicked: infoDialog.open() // Membuka dialog
+        }
+
+        // IconButton {
+        //     iconName: "help"
+        //     anchors.right: parent.right
+        //     anchors.verticalCenter: parent.verticalCenter
+        //     onClicked: infoDialog.open()
+        //     tooltipText: "Info"
+        // }
+    }
 
     // StackView adalah area di mana halaman-halaman akan ditampilkan
     StackView {
         id: stackView
         anchors.fill: parent
+        anchors.margins: 8
 
         // Halaman awal yang ditampilkan saat aplikasi pertama kali berjalan
-        initialItem: "HomePage.ui.qml"
+        initialItem: "pages/HomePage.qml"
     }
 
     Dialog {
@@ -60,29 +83,4 @@ ApplicationWindow {
             text: "Aplikasi ini dibuat dengan QML."
         }
     }
-
-    // Footer berisi tombol navigasi
-    /*footer: Frame {
-        RowLayout {
-            anchors.fill: parent
-
-            Button {
-                text: "Home"
-                Layout.fillWidth: true
-                onClicked: {
-                    // Mendorong halaman baru ke tumpukan.
-                    // Jika halaman sudah ada, ia akan kembali ke sana.
-                    stackView.push("HomePage.ui.qml")
-                }
-            }
-
-            Button {
-                text: "Dosen"
-                Layout.fillWidth: true
-                onClicked: {
-                    stackView.push("DosenPage.ui.qml")
-                }
-            }
-        }
-    }*/
 }
