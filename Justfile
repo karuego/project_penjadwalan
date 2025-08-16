@@ -5,3 +5,6 @@ py:
 
 qt:
 	@watchexec -w qml -r -- qml6 -I qml "qml/Main.qml"
+
+qt-watch:
+	@qml6 -I qml "qml/Main.qml"
