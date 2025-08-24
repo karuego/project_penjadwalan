@@ -1,11 +1,11 @@
 # This Python file uses the following encoding: utf-8
+import os
 import sys
 from pathlib import Path
 
 # from PySide6.QtCore import QUrl
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtQml import QQmlApplicationEngine, qmlRegisterType
-from PySide6.QtCore import QObject, Signal, Slot
+from PySide6.QtQml import QQmlApplicationEngine
 
 if __name__ == "__main__":
     app = QGuiApplication(sys.argv)
