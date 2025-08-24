@@ -13,9 +13,11 @@ Page {
     id: pagePengajar
     title: "Daftar Pengajar"
     Material.theme: Material.Light
+    // padding: 24
+    // leftPadding: 16
+    // rightPadding: 16
 
     ColumnLayout {
-        spacing: 10
         anchors.fill: parent
 
         Button {
@@ -23,10 +25,13 @@ Page {
             text: "Tambah Pengajar"
             onClicked: stackView.push("TambahPengajarPage.qml")
 
+            Material.foreground: Material.Pink
+
             // width: 100
             // height: 55
             implicitHeight: 55
             Layout.alignment: Qt.AlignHCenter
+            Layout.bottomMargin: 16
 
             background: Rectangle {
                 radius: 8
@@ -52,85 +57,93 @@ Page {
             border.width: 1        // Ketebalan garis border
             radius: 8              // (Opsional) Buat sudutnya membulat
 
-            ListView {
-                id: listView
-                model: productModel
-                anchors.margins: 8
-                spacing: 5
+            ScrollView {
+                anchors.fill: parent
+                anchors.margins: 4
 
-                anchors.fill: parent // ListView mengisi seluruh area di dalam bingkai
-                // PENTING: Agar item tidak "bocor" keluar dari sudut bulat
-                clip: true
+                ListView {
+                    id: listView
+                    model: productModel
+                    spacing: 8
 
-                // PENTING: Gunakan properti Layout, bukan anchors
-                Layout.fillWidth: true  // Buat ListView mengisi lebar kolom
-                Layout.fillHeight: true // Buat ListView mengisi sisa tinggi kolom
+                    // PENTING: Agar item tidak "bocor" keluar dari sudut bulat
+                    clip: true
 
-                // Kurangi jeda sebelum scroll dimulai.
-                // Nilai defaultnya cukup tinggi. Coba atur ke 0 atau nilai kecil seperti 20.
-                // pressDelay: 0
+                    // anchors.fill: parent // ListView mengisi seluruh area di dalam bingkai
+                    // PENTING: Gunakan properti Layout, bukan anchors
+                    Layout.fillWidth: true  // Buat ListView mengisi lebar kolom
+                    Layout.fillHeight: true // Buat ListView mengisi sisa tinggi kolom
+                    // implicitHeight: contentHeight
 
-                // Atur seberapa cepat laju scroll melambat setelah di-flick.
-                // Nilai default: 1500. Nilai lebih rendah = lebih licin.
-                // flickDeceleration: 1000
+                    // Kurangi jeda sebelum scroll dimulai.
+                    // Nilai defaultnya cukup tinggi. Coba atur ke 0 atau nilai kecil seperti 20.
+                    // pressDelay: 0
 
-                // Tambahkan WheelHandler untuk mengontrol scroll dari touchpad/mouse wheel
-                WheelHandler {
-                    // Properti custom untuk mengatur kecepatan, agar mudah diubah.
-                    // Coba nilai antara 1.5 hingga 3.0 untuk merasakan perbedaannya.
-                    property real speedMultiplier: 50.0
+                    // Atur seberapa cepat laju scroll melambat setelah di-flick.
+                    // Nilai default: 1500. Nilai lebih rendah = lebih licin.
+                    // flickDeceleration: 1000
 
-                    // Handler ini akan aktif setiap kali ada event scroll dari touchpad/wheel
-                    onWheel: (event) => {
-                        // Ambil nilai pergerakan vertikal dari touchpad (event.pixelDelta.y)
-                        // dan kalikan dengan pengali kecepatan kita.
-                        let scrollAmount = event.pixelDelta.y * speedMultiplier;
+                    // Tambahkan WheelHandler untuk mengontrol scroll dari touchpad/mouse wheel
+                    /*WheelHandler {
+                        // Properti custom untuk mengatur kecepatan, agar mudah diubah.
+                        // Coba nilai antara 1.5 hingga 3.0 untuk merasakan perbedaannya.
+                        property real speedMultiplier: 50.0
 
-                        // Ubah posisi konten ListView secara manual.
-                        listView.contentY += scrollAmount;
+                        // Handler ini akan aktif setiap kali ada event scroll dari touchpad/wheel
+                        onWheel: (event) => {
+                            // Ambil nilai pergerakan vertikal dari touchpad (event.pixelDelta.y)
+                            // dan kalikan dengan pengali kecepatan kita.
+                            let scrollAmount = event.pixelDelta.y * speedMultiplier;
 
-                        // Beritahu sistem bahwa kita sudah menangani event ini.
-                        // Ini mencegah Flickable melakukan scroll default-nya (menghindari double scroll).
-                        event.accepted = true;
-                    }
-                }
+                            // Ubah posisi konten ListView secara manual.
+                            listView.contentY += scrollAmount;
 
-                // Delegate ini akan dibuat ulang untuk setiap item di dalam model.
-                delegate: ItemDelegate {
-                    width: parent.width // Buat setiap item mengisi lebar ListView
+                            // Beritahu sistem bahwa kita sudah menangani event ini.
+                            // Ini mencegah Flickable melakukan scroll default-nya (menghindari double scroll).
+                            event.accepted = true;
+                        }
+                    }*/
 
-                    // 'model' adalah variabel khusus di dalam delegate
-                    // yang berisi data untuk baris saat ini.
-                    // Kita akses properti dari ListElement melalui 'model'.
+                    // Delegate ini akan dibuat ulang untuk setiap item di dalam model.
+                    delegate: ItemDelegate {
+                        width: parent.width // Buat setiap item mengisi lebar ListView
 
-                    // Teks besar (Judul)
-                    Label {
-                        id: nameLabel
-                        text: model.productName // Ambil 'productName' dari model
-                        font.pixelSize: 18
-                        font.bold: true
-                    }
+                        // 'model' adalah variabel khusus di dalam delegate
+                        // yang berisi data untuk baris saat ini.
+                        // Kita akses properti dari ListElement melalui 'model'.
 
-                    // Teks kecil (Deskripsi)
-                    Label {
-                        text: model.productDescription // Ambil 'productDescription' dari model
-                        anchors.top: nameLabel.bottom // Posisikan di bawah teks besar
-                        anchors.topMargin: 2
-                        font.pixelSize: 13
-                        color: "#555"
-                    }
+                        // Teks besar (Judul)
+                        Label {
+                            id: nameLabel
+                            text: model.productName // Ambil 'productName' dari model
+                            font.pixelSize: 18
+                            font.bold: true
+                        }
 
-                    IconButton {
-                        iconName: "delete"
-                        iconColor: "red"
-                        // tooltipText: "Hapus"
-                        anchors.right: parent.right
-                        onClicked: { console.log("Anda menghapus item:", model.productName) }
-                    }
+                        // Teks kecil (Deskripsi)
+                        Label {
+                            text: model.productDescription // Ambil 'productDescription' dari model
+                            anchors.top: nameLabel.bottom // Posisikan di bawah teks besar
+                            anchors.topMargin: 2
+                            font.pixelSize: 13
+                            color: "#555"
+                        }
 
-                    // Aksi saat item di-klik
-                    onClicked: {
-                        console.log("Anda menekan item:", model.productName)
+                        IconButton {
+                            iconName: "delete"
+                            iconColor: "red"
+                            // tooltipText: "Hapus"
+                            anchors.right: parent.right
+                            anchors.rightMargin: 15
+                            onClicked: {
+                                console.log("Anda menghapus item:", model.productName)
+                            }
+                        }
+
+                        // Aksi saat item di-klik
+                        onClicked: {
+                            console.log("Anda menekan item:", model.productName)
+                        }
                     }
                 }
             }

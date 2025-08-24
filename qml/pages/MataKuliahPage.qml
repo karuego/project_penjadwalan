@@ -9,9 +9,9 @@ import Theme
 
 Page {
     title: "Daftar Mata Kuliah"
+    Material.theme: Material.Light
 
     ColumnLayout {
-        spacing: 10
         anchors.fill: parent
 
         Button {
@@ -23,61 +23,55 @@ Page {
         }
 
         Rectangle {
-            // Gunakan Layout untuk mengatur ukuran dan posisi bingkai
             Layout.fillWidth: true
             Layout.fillHeight: true
 
-            // 2. Atur properti border
-            border.color: "#cccccc" // Warna garis border
-            border.width: 1        // Ketebalan garis border
-            radius: 8              // (Opsional) Buat sudutnya membulat
+            border.color: "#cccccc"
+            border.width: 1
+            radius: 8
 
-            ListView {
-                id: listView
-                model: productModel
-                anchors.margins: 8
-                spacing: 5
+            ScrollView {
                 anchors.fill: parent
-                clip: true
+                anchors.margins: 4
 
-                // PENTING: Gunakan properti Layout, bukan anchors
-                Layout.fillWidth: true
-                Layout.fillHeight: true
+                ListView {
+                    id: listView
+                    model: productModel
+                    spacing: 8
+                    clip: true
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
 
-                // Delegate ini akan dibuat ulang untuk setiap item di dalam model.
-                delegate: ItemDelegate {
-                    // Setiap item akan mengisi lebar ListView
-                    width: parent.width
+                    delegate: ItemDelegate {
+                        id: item
+                        width: parent.width
 
-                    // 'model' adalah variabel khusus di dalam delegate
-                    // yang berisi data untuk baris saat ini.
-                    // Kita akses properti dari ListElement melalui 'model'.
+                        Label {
+                            id: nameLabel
+                            text: model.productName
+                            font.pixelSize: 18
+                            font.bold: true
+                        }
 
-                    Label {
-                        id: nameLabel
-                        text: model.productName
-                        font.pixelSize: 18
-                        font.bold: true
-                    }
+                        Label {
+                            text: model.productDescription
+                            anchors.top: nameLabel.bottom // Posisikan di bawah teks besar
+                            anchors.topMargin: 2
+                            font.pixelSize: 13
+                            color: "#555"
+                        }
 
-                    Label {
-                        text: model.productDescription
-                        anchors.top: nameLabel.bottom // Posisikan di bawah teks besar
-                        anchors.topMargin: 2
-                        font.pixelSize: 13
-                        color: "#555"
-                    }
+                        IconButton {
+                            iconName: "delete"
+                            iconColor: "red"
+                            // tooltipText: "Hapus"
+                            anchors.right: parent.right
+                            onClicked: { console.log("Anda menghapus item:", model.productName) }
+                        }
 
-                    IconButton {
-                        iconName: "delete"
-                        iconColor: "red"
-                        // tooltipText: "Hapus"
-                        anchors.right: parent.right
-                        onClicked: { console.log("Anda menghapus item:", model.productName) }
-                    }
-
-                    onClicked: {
-                        console.log("Anda menekan item:", model.productName)
+                        onClicked: {
+                            console.log("Anda menekan item:", model.productName)
+                        }
                     }
                 }
             }
