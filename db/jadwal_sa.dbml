@@ -1,0 +1,67 @@
+// Use DBML to define your database structure
+// Docs: https://dbml.dbdiagram.io/docs
+
+Project jadwal_sa {
+  database_type: 'SQLite'
+  Note: 'Penjadwalan mata kuliah menggunakan Simulated Annealing'
+}
+
+Table ruangan {
+  id integer [pk, increment]
+  nama text [unique, not null]
+
+  -- jenis: 'teori', 'praktek'
+  jenis text [not null, default: 'teori', note: 'Untuk membedakan perkuliahan di ruang kelas dengan di laboratorium']
+}
+
+Table pengajar {
+  id integer [pk, increment]
+  nama text [not null]
+  jenis text [not null, default: 'teori']
+}
+
+Table mata_kuliah {
+  id integer [pk, increment]
+  nama text [not null]
+  semester integer [not null]
+  jumlah_kelas integer [not null]
+  jenis JenisSesi [not null, default: 'teori']
+}
+
+Table waktu {
+  id integer [pk, increment]
+  hari text [not null]
+  jam_mulai time [not null, note: 'HH:MM']
+  jam_selesai time [not null, note: 'HH:MM']
+}
+
+Table pengampu {
+  id integer [pk, increment]
+  mata_kuliah_id integer [ref: > mata_kuliah.id]
+  pengajar_id integer [ref: > pengajar.id]
+}
+
+Table preferensi {
+  id integer [pk, increment]
+  pengajar_id integer [not null, ref: > pengajar.id]
+  waktu_id integer [not null, ref: > waktu.id]
+  hindari bool [not null, default: true]
+}
+
+Table jadwal {
+  id integer [pk, increment]
+  mata_kuliah_id integer [not null, ref: > mata_kuliah.id]
+
+  kelas char [not null, note: 'contoh: A, B, C']
+  ruangan_id integer [not null, ref: > ruangan.id]
+
+  jenis text [not null, default: 'teori']
+  -- 0   = kelas teori
+  -- 1.. = praketk
+  sesi_kelas integer [default: 0, note: 'sesi kelas praktikum (Sesi 1, Sesi 2)']
+
+  pengajar_id integer [not null, ref: > pengajar.id]
+  waktu_id integer [not null, ref: > waktu.id]
+
+  daring bool [not null, default: false]
+}

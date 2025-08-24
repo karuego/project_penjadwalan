@@ -31,8 +31,8 @@ CREATE TABLE mata_kuliah (
     nama TEXT NOT NULL,
     semester INTEGER NOT NULL,
     jumlah_kelas INTEGER NOT NULL,
+    jumlah_sesi INTEGER DEFAULT 0,
     jenis TEXT NOT NULL DEFAULT 'teori'
-    -- FOREIGN KEY (jenis) REFERENCES JenisSesi(value)
 );
 
 CREATE TABLE waktu (
@@ -41,7 +41,6 @@ CREATE TABLE waktu (
     -- hari TEXT CHECK (hari IN ('Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'))
     jam_mulai TIME NOT NULL,
     jam_selesai TIME NOT NULL
-    -- FOREIGN KEY (hari) REFERENCES NamaHari(value)
 );
 
 CREATE TABLE pengampu (
@@ -52,12 +51,12 @@ CREATE TABLE pengampu (
     FOREIGN KEY (pengajar_id) REFERENCES pengajar(id)
 );
 
-CREATE TABLE preferensi_dosen (
+CREATE TABLE preferensi (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    dosen_id INTEGER NOT NULL,
+    pengajar_id INTEGER NOT NULL,
     waktu_id INTEGER NOT NULL,
     hindari BOOLEAN NOT NULL DEFAULT TRUE,
-    FOREIGN KEY (dosen_id) REFERENCES dosen(id),
+    FOREIGN KEY (pengajar_id) REFERENCES pengajar(id),
     FOREIGN KEY (waktu_id) REFERENCES waktu(id)
 );
 
@@ -66,10 +65,18 @@ CREATE TABLE jadwal (
     mata_kuliah_id INTEGER NOT NULL,
     kelas CHAR NOT NULL,
     ruangan_id INTEGER NOT NULL,
+
+    -- jenis: teori, praktek
     jenis TEXT NOT NULL DEFAULT 'teori',
+
+    -- 0   = teori
+    -- 1.. = praktek
+    sesi_kelas INTEGER DEFAULT 0,
+
     pengajar_id INTEGER NOT NULL,
     waktu_id INTEGER NOT NULL,
     daring BOOLEAN NOT NULL DEFAULT FALSE,
+
     FOREIGN KEY (mata_kuliah_id) REFERENCES mata_kuliah(id),
     FOREIGN KEY (ruangan_id) REFERENCES ruangan(id),
     FOREIGN KEY (pengajar_id) REFERENCES pengajar(id),
