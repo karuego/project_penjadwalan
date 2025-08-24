@@ -1,0 +1,25 @@
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+  default:
+    deps: [py]
+    silent: true
+
+  run:
+    cmd:
+      task: py
+
+  py:
+    desc: "Run via Python"
+    cmd: python main.py
+
+  qt:
+    desc: "View QML Scene"
+    cmd: qml6 -I qml qml/Main.qml
+    sources:
+      - qml/**/*
+    method: none
+    # method: timestamp
+    # method: checksum
