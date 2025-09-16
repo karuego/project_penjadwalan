@@ -5,6 +5,7 @@ import QtQuick.Layouts
 import QtQuick.Controls.Material
 
 Page {
+    id: root
     title: "Tambah Mata Kuliah"
 
     ColumnLayout {
@@ -13,7 +14,7 @@ Page {
 
         TextField {
             id: textFieldNama
-            placeholderText: qsTr("Nama Pengajar")
+            placeholderText: qsTr("Mata Kuliah")
             Accessible.name: qsTr("Input Nama Pengajar")
             // Material.containerStyle: Material.Filled
             Material.containerStyle: Material.Outlined

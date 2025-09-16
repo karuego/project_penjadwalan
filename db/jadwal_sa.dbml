@@ -10,26 +10,38 @@ Table ruangan {
   id integer [pk, increment]
   nama text [unique, not null]
 
-  -- jenis: 'teori', 'praktek'
+  // jenis: 'teori', 'praktek'
   jenis text [not null, default: 'teori', note: 'Untuk membedakan perkuliahan di ruang kelas dengan di laboratorium']
 }
 
 Table pengajar {
   id integer [pk, increment]
   nama text [not null]
-  jenis text [not null, default: 'teori']
+
+  //  jenis: 'dosen', 'asisten'
+  jenis text [not null, default: 'dosen']
 }
 
 Table mata_kuliah {
   id integer [pk, increment]
   nama text [not null]
   semester integer [not null]
-  jumlah_kelas integer [not null]
-  jenis JenisSesi [not null, default: 'teori']
+  // jumlah_sesi integer [not null, default: 0]
 }
 
-Table waktu {
+Table komponen_mk {
   id integer [pk, increment]
+  mata_kuliah_id integer [not null, ref: > mata_kuliah.id]
+  nama_komponen text [not null, note: "Misal: 'Teori Basis Data', 'Praktikum Basis Data'"]
+  durasi_blok integer [not null, note: "Jumlah blok 45 menit"]
+  jenis text [not null]
+  jumlah_kelas integer [not null]
+  jumlah_sesi_praktikum integer [not null, default: 1, note: "Default 1, bisa 2 atau lebih"]
+}
+
+// Blok waktu 45 menit
+Table waktu {
+  id integer [pk, note: "gunakan id dari jam seperti 800, 845, 1115, 1130. untuk memudahkan validasi waktu baru. akan error apabila jam dan menit sudah terdaftar pada rentang waktu tertentu"]
   hari text [not null]
   jam_mulai time [not null, note: 'HH:MM']
   jam_selesai time [not null, note: 'HH:MM']
@@ -37,31 +49,31 @@ Table waktu {
 
 Table pengampu {
   id integer [pk, increment]
-  mata_kuliah_id integer [ref: > mata_kuliah.id]
   pengajar_id integer [ref: > pengajar.id]
+  komponen_mk_id integer [not null, ref: > komponen_mk.id]
 }
 
-Table preferensi {
+Table preferensi_pengajar {
   id integer [pk, increment]
   pengajar_id integer [not null, ref: > pengajar.id]
   waktu_id integer [not null, ref: > waktu.id]
-  hindari bool [not null, default: true]
+  // hindari bool [not null, default: true]
 }
 
 Table jadwal {
   id integer [pk, increment]
-  mata_kuliah_id integer [not null, ref: > mata_kuliah.id]
-
+  komponen_mk_id integer [not null, ref: > komponen_mk.id]
+  pengajar_id integer [not null, ref: > pengajar.id]
   kelas char [not null, note: 'contoh: A, B, C']
   ruangan_id integer [not null, ref: > ruangan.id]
 
-  jenis text [not null, default: 'teori']
-  -- 0   = kelas teori
-  -- 1.. = praketk
-  sesi_kelas integer [default: 0, note: 'sesi kelas praktikum (Sesi 1, Sesi 2)']
+  // jenis text [not null, default: 'teori']
 
-  pengajar_id integer [not null, ref: > pengajar.id]
-  waktu_id integer [not null, ref: > waktu.id]
+  // Nilai : 1 atau 2
+  sesi_ke integer [not null, note: "Sesi ke-berapa untuk praktikum"]
+
+  waktu_id_start integer [not null, ref: > waktu.id]
+  durasi_blok integer [not null]
 
   daring bool [not null, default: false]
 }

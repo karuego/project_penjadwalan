@@ -23,7 +23,7 @@ Page {
         Button {
             id: tambahDosen
             text: "Tambah Pengajar"
-            onClicked: stackView.push("TambahPengajarPage.qml")
+            onClicked: stackView.push("TambahPengajarPage.qml") // qmllint disable unqualified
 
             Material.foreground: Material.Pink
 

@@ -15,7 +15,7 @@ Page {
             spacing: 16
 
             Button {
-                text: qsTr("Daftar Waktu Kuliah")
+                text: qsTr("Daftar Waktu")
                 Layout.fillWidth: true
                 onClicked: stackView.push("WaktuPage.qml")
 

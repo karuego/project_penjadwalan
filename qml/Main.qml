@@ -14,7 +14,7 @@ ApplicationWindow {
     width: 800
     height: 600
     title: qsTr("Aplikasi Penjadwalan w/ Simulated Annealing")
-    // Material.theme: Material.Light
+    // Material.theme: Material.Dark
     // Material.accent: Material.Blue
 
     header: ToolBar {

@@ -11,12 +11,12 @@ qt:
 	@qml6 -I qml "qml/Main.qml"
 
 qt-watch:
-	@watchexec -w qml -r -- just qt
+	@watchexec -w qml -r -- qml6 -I qml "qml/Main.qml"
 
-lint: lint-qt lint-py
-
+[group('lint')]
 lint-py:
 	#
 
+[group('lint')]
 lint-qt:
 	qmllint qml/Main.qml

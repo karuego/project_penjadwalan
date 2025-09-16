@@ -1,6 +1,31 @@
 import sqlite3
+from dataclasses import dataclass
+from datetime import time, datetime
+from typing import List, Tuple, Dict, Optional
 
 DB_FILE = "jadwal.db"
+
+class DatabaseManager:
+    def __init__(self, db_path: str = DB_FILE):
+        self.db_path = db_path
+        self.init_database()
+
+    def init_database(self):
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+
+            cursor.execute('')
+            cursor.execute('')
+
+            cursor.commit()
+
+    def get_connection(self):
+        return sqlite3.connect(self.db_path)
+
+
+
+
+
 
 def setup(db_name=DB_FILE):
     """

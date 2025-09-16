@@ -10,14 +10,15 @@ import "../components"
 import Theme 1.0
 
 Page {
-    id: pageTambahPengajar
+    id: root
     title: "Tambah Pengajar"
-    // Material.theme: Material.Light
     Material.accent: Material.Blue
 
     readonly property size textFieldSize: Qt.size(250, 50)
+    readonly property size buttonSize: Qt.size(120, 50)
 
     ColumnLayout {
+        spacing: 8
         anchors.fill: parent
 
         TextField {
@@ -26,8 +27,8 @@ Page {
             Accessible.name: qsTr("Input Nama Pengajar")
             // Material.containerStyle: Material.Filled
             Material.containerStyle: Material.Outlined
-            background.implicitHeight : textFieldSize.height
-            background.implicitWidth: textFieldSize.width
+            background.implicitHeight : root.textFieldSize.height
+            background.implicitWidth: root.textFieldSize.width
         }
 
         ButtonGroup {
@@ -51,44 +52,128 @@ Page {
             }
         }
 
-        TextField {
-            id: textFieldSks
-            placeholderText: qsTr("Jumlah SKS")
-            background.implicitHeight : textFieldSize.height
-            background.implicitWidth: textFieldSize.width
+        // TextField {
+        //     id: textFieldSks
+        //     placeholderText: qsTr("Jumlah SKS")
+        //     background.implicitHeight : root.textFieldSize.height
+        //     background.implicitWidth: root.textFieldSize.width
+        // }
+
+        RowLayout {
+            spacing: 8
+
+            ComboBox {
+                id: comboBoxWaktu
+                background.implicitHeight : root.textFieldSize.height
+                background.implicitWidth: root.textFieldSize.width
+                model: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
+                // onCurrentValueChanged:
+            }
+
+            Button {
+                id: btnTambahWaktu
+                text: qsTr("Tambah")
+                hoverEnabled: true
+                Layout.alignment: Qt.AlignRight
+                implicitWidth: root.buttonSize.width
+
+                ToolTip.delay: 300
+                ToolTip.timeout: 5000
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("This tool tip is shown after hovering the button for a second.")
+            }
         }
 
-        TextField {
-            id: textFieldSemester
-            placeholderText: qsTr("Semester")
-            background.implicitHeight : textFieldSize.height
-            background.implicitWidth: textFieldSize.width
-        }
 
-        TextField {
-            id: textFieldPengampu
-            placeholderText: qsTr("Pengampu")
-            background.implicitHeight : textFieldSize.height
-            background.implicitWidth: textFieldSize.width
-        }
+        Rectangle {
+            id: kotakList
+            radius: 8
+            border.width: 1.5
+            border.color: "#bbb"
 
-        TextField {
-            id: textFieldJumlahKelas
-            placeholderText: qsTr("Jumlah Kelas")
-            background.implicitHeight : textFieldSize.height
-            background.implicitWidth: textFieldSize.width
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+
+            ScrollView {
+                id: waktuContent
+                // anchors.centerIn: parent
+                // spacing: 10
+
+                anchors.fill: parent
+                anchors.margins: 4
+
+                ListView {
+                    id: listView
+                    spacing: 8
+                    clip: true
+                    model: waktuModel
+
+                    delegate: ItemDelegate {
+                        id: item
+                        width: parent.width
+                        highlighted: ListView.isCurrentItem
+
+                        required property int index
+                        required property string hari
+                        required property string jamMulai
+                        required property string jamSelesai
+
+                        Label {
+                            id: hariLabel
+                            text: item.hari
+                            font.pixelSize: 18
+                            font.bold: true
+                        }
+
+                        Label {
+                            id: jamLabel
+                            text: item.jamMulai + " - " + item.jamSelesai
+                            anchors.top: hariLabel.bottom
+                            anchors.topMargin: 2
+                            font.pixelSize: 13
+                            color: "#555"
+                        }
+
+                        IconButton {
+                            iconName: "delete"
+                            iconColor: "red"
+                            // tooltipText: "Hapus"
+                            anchors.right: parent.right
+                            anchors.rightMargin: 16
+                            onClicked: {
+                                console.log(
+                                    `Anda menghapus item: "${hariLabel.text}: ${jamLabel.text}"`
+                                )
+
+                                confirmDialog.openWithText(`Hapus waktu: "${hariLabel.text}: ${jamLabel.text}"`)
+                            }
+                        }
+
+                        onClicked: {
+                            console.log("Anda menekan item:", index, ":", hari)
+                        }
+
+                        // ScrollIndicator.vertical: ScrollIndicator { }
+                    }
+                }
+            }
         }
 
         Button {
-            text: qsTr("Button")
+            id: btnSimpanPengajar
+            text: qsTr("Simpan")
             hoverEnabled: true
+            Material.background: Material.Blue
+            Layout.alignment: Qt.AlignRight
+            implicitWidth: root.buttonSize.width * 1.5
+
             ToolTip.delay: 300
             ToolTip.timeout: 5000
             ToolTip.visible: hovered
             ToolTip.text: qsTr("This tool tip is shown after hovering the button for a second.")
         }
 
-        Button {
+        /*Button {
             text: "Open"
             onClicked: popup.open()
             highlighted: true
@@ -102,7 +187,7 @@ Page {
             // Material.roundedScale: Material.LargeScale
             // Material.roundedScale: Material.ExtraLargeScale
             // Material.roundedScale: Material.FullScale
-        }
+        }*/
 
         Popup {
             id: popup
@@ -150,7 +235,7 @@ Page {
         }
 
         /*RowLayout {
-             Text {
+            Text {
                 text: "Which basket?"
             }
             TextInput {
@@ -161,7 +246,7 @@ Page {
         }*/
 
         // TextField standar sebagai perbandingan
-        TextField {
+        /*TextField {
             placeholderText: "TextField Standar"
         }
 
@@ -187,6 +272,51 @@ Page {
                     Behavior on height { NumberAnimation { duration: 200 } }
                 }
             }
+        }*/
+    }
+
+    ListModel {
+        id: waktuModel
+
+        ListElement {
+            hari: "Senin"
+            jamMulai: "08:00"
+            jamSelesai: "09:30"
+        }
+        ListElement {
+            hari: "Senin"
+            jamMulai: "09:35"
+            jamSelesai: "11:05"
+        }
+        ListElement {
+            hari: "Senin"
+            jamMulai: "11:10"
+            jamSelesai: "12:50"
+        }
+        ListElement {
+            hari: "Senin"
+            jamMulai: "12:55"
+            jamSelesai: "09:30"
+        }
+        ListElement {
+            hari: "Senin"
+            jamMulai: "08:00"
+            jamSelesai: "09:30"
+        }
+        ListElement {
+            hari: "Senin"
+            jamMulai: "08:00"
+            jamSelesai: "09:30"
+        }
+        ListElement {
+            hari: "Senin"
+            jamMulai: "08:00"
+            jamSelesai: "09:30"
+        }
+        ListElement {
+            hari: "Senin"
+            jamMulai: "08:00"
+            jamSelesai: "09:30"
         }
     }
 
