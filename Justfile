@@ -5,13 +5,19 @@
 run: py
 
 py:
-	@python main.py
+	uv run src/myapp/main.py
+
+py-watch:
+	@watchexec -w src/myapp -r -- uv run src/myapp/main.py
+
+debug:
+	@uv run python -i src/myapp/main.py
 
 qt:
-	@qml6 -I qml "qml/Main.qml"
+	@qml6 -I src/myapp/qml "src/myapp/qml/Main.qml"
 
 qt-watch:
-	@watchexec -w qml -r -- qml6 -I qml "qml/Main.qml"
+	@watchexec -w src/myapp/qml -r -- qml6 -I src/myapp/qml "src/myapp/qml/Main.qml"
 
 [group('lint')]
 lint-py:
@@ -19,4 +25,4 @@ lint-py:
 
 [group('lint')]
 lint-qt:
-	qmllint qml/Main.qml
+	qmllint src/myapp/qml/Main.qml

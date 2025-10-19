@@ -4,13 +4,24 @@ build-backend = "hatchling.build"
 
 [project]
 name = "myapp"
-dynamic = ["version"]
-license = ""
-
-[tool.hatch.version]
-path = "myapp/__init__.py"
-
-[tool.hatch.build.targets.sdist]
-include = [
-    "/myapp",
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = ["pyside6"]
+authors = [
+  { name="Nama Anda", email="email@anda.com" },
 ]
+description = "Aplikasi penjadwalan mata kuliah menggunakan Simulated Annealing."
+readme = "README.md"
+
+[project.scripts]
+myapp = "myapp.main:run"
+
+[tool.hatch.build]
+hooks-enabled = true
+sources = ["src"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["myapp"]
+
+[tool.hatch.build.targets.wheel.shared-data]
+"src/myapp/assets" = "myapp/assets"

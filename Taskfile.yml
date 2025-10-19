@@ -5,7 +5,7 @@ version: '3'
 tasks:
   default:
     deps: [py]
-    silent: true
+    #silent: true
 
   run:
     cmd:
@@ -13,13 +13,22 @@ tasks:
 
   py:
     desc: "Run via Python"
-    cmd: python main.py
+    cmd: uv run src/myapp/main.py
+    sources:
+      - src/myapp/
+    method: timestamp
+
+  debug:
+    cmd: uv run python -i src/myapp/main.py
+    sources:
+      - src/myapp/
+    method: checksum
 
   qt:
     desc: "View QML Scene"
-    cmd: qml6 -I qml qml/Main.qml
+    cmd: qml6 -I src/myapp/qml src/myapp/qml/Main.qml
     sources:
-      - qml/**/*
-    method: none
-    # method: timestamp
-    # method: checksum
+      - src/myapp/qml/**/*.qml
+    #method: none
+    method: timestamp
+    #method: checksum

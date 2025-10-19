@@ -1,0 +1,23 @@
+from hatchling.builders.hooks.plugin.interface import BuildHookInterface
+import subprocess
+
+class CustomBuildHook(BuildHookInterface):
+	def finalize(self, version, build_data, artifact):
+		subprocess.run([
+			"uv", "run",
+			"pyinstaller",
+			"--name", "myapp",
+			"--onefile",
+			"--noconsole",
+			"--collect-all", "PySide6",
+			"--collect-submodules", "PySide6.QtCore",
+			"--collect-submodules", "PySide6.QtGui",
+			"--collect-submodules", "PySide6.QtQml",
+			"--collect-data", "PySide6",
+			"--add-data", "src/myapp/qml:qml",
+			"--add-data", "src/myapp/algo:algo",
+			"--add-data", "src/myapp/assets:assets",
+			"--add-data", "src/myapp/fonts:fonts",
+			"--icon", "icon.png",
+			"src/myapp/main.py"
+		], check=True)
