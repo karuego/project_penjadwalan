@@ -25,3 +25,9 @@ packages = ["myapp"]
 
 [tool.hatch.build.targets.wheel.shared-data]
 "src/myapp/assets" = "myapp/assets"
+
+[dependency-groups]
+dev = [
+    "pylyzer>=0.0.82",
+    "ruff>=0.14.1",
+]
