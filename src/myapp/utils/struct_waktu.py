@@ -26,10 +26,25 @@ class TimeSlot(QObject):
         self._id = id
 
     def getHari(self) -> int:
+        """Mengembalikan id hari"""
         return self._hari
 
-    def setHari(self, hari: int) -> None:
+    def getHariName(self) -> str | None:
+        """Mengembalikan nama hari"""
+        return Hari.getNama(self._id)
+
+    def setHari(self, hari: int) -> bool:
+        if not Hari.getNama(hari):
+            return False
         self._hari = hari
+        return True
+
+    def setHariName(self, hari: str) -> bool:
+        hari_id: int = Hari.getId(hari)
+        if hari_id == -1:
+            return False
+        self._hari = hari_id
+        return True
 
     def getMulai(self) -> str:
         return self._mulai

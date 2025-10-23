@@ -23,6 +23,7 @@ Page {
     property var contextBridgeRef: contextBridge // qmllint disable unqualified
     property var waktuModelRef: contextBridgeRef.waktuModel
     property var waktuProxyRef: contextBridgeRef.waktuProxy
+    property var namaNamaHariRef: contextBridgeRef.namaNamaHari
 
     property string reloadMessage: "Memuat ulang database..."
     property var reloadFunc: () => waktuModelRef.reload()
@@ -46,8 +47,8 @@ Page {
 
                 ComboBox {
                     id: comboBoxHari
-                    model: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
-                    onCurrentValueChanged: {
+                    model: root.namaNamaHariRef
+                    onActivated: {
                         spinMulaiJam.value = 8;
                         spinMulaiMenit.value = 0;
                     }
@@ -212,14 +213,14 @@ Page {
 
 
             ]
-            filters: [
-                FunctionFilter {
-                    function filter(data: TimeSlot): bool {
-                        //return data.hari == 2
-                        return true;
-                    }
-                }
-            ]
+            // filters: [
+            //     FunctionFilter {
+            //         function filter(data: TimeSlot): bool {
+            //             //return data.hari == 2
+            //             return true;
+            //         }
+            //     }
+            // ]
         }
         // qmllint enable
 
@@ -254,8 +255,7 @@ Page {
 
                         required property int index
                         required property int id_
-                        // TODO: Ganti string menjadi int, dan dapatkan nama hari dari class Hari di Python
-                        required property string hari
+                        required property int hari
                         required property string mulai
                         required property string selesai
 

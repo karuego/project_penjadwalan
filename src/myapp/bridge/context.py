@@ -75,7 +75,7 @@ class ContextBridge(QObject):
     def mataKuliahModel(self) -> MataKuliahModel:
         return self._matakuliah_model
 
-    @Property(list, constant=True)
+    @Property(list, constant=True, final=True)
     def namaNamaHari(self) -> list[str]:
         return Hari.getAll()
 
