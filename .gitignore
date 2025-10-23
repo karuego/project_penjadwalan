@@ -91,3 +91,7 @@ wheels/
 
 # Virtual environments
 .venv
+
+app.log
+database.sqlite3.db
+.task/
