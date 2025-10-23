@@ -11,6 +11,17 @@ import Theme
 Page {
     title: "Daftar Ruangan"
 
+    property StackView stackViewRef
+    property CustomDialog confirmDialogRef
+    property CustomDialog alertDialogRef
+
+    property var contextBridgeRef: contextBridge // qmllint disable unqualified
+    property var ruangModelRef: contextBridgeRef.ruangModel
+    property var ruangProxyRef: contextBridgeRef.ruangProxy
+
+    // property string reloadMessage: "Memuat ulang database"
+    // property var reloadFunc: () => ruangModelRef.reload()
+
     RowLayout {
         spacing: 10
         anchors.fill: parent

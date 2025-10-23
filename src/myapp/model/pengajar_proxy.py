@@ -1,14 +1,15 @@
 import typing
+
 from PySide6.QtCore import (
-    Slot,
-    Qt,
-    QObject,
     QModelIndex,
+    QObject,
     QPersistentModelIndex,
     QSortFilterProxyModel,
+    Qt,
+    Slot,
 )
 
-from . import PengajarModel
+from .pengajar_model import PengajarModel
 
 
 class PengajarProxyModel(QSortFilterProxyModel):
@@ -54,8 +55,9 @@ class PengajarProxyModel(QSortFilterProxyModel):
         if 0 <= proxy_row < self.rowCount():
             proxy_index = self.index(proxy_row, 0)
             source_index = self.mapToSource(proxy_index)
-            self._pengajar_model.removePengajar(source_index.row())  # pyright: ignore[reportAny]
+            self._pengajar_model.fnRemoveByIndex(source_index.row())
 
+    # TODO: return object Pengajar
     # Gunakana QVariant agar QML bisa menerima dictionary
     @Slot(int, result="QVariant")  # pyright: ignore[reportAny, reportArgumentType]
     def getPengajarFromProxyIndex(self, proxy_row: int):
@@ -63,14 +65,15 @@ class PengajarProxyModel(QSortFilterProxyModel):
         if 0 <= proxy_row < self.rowCount():
             proxy_index = self.index(proxy_row, 0)
             source_index = self.mapToSource(proxy_index)
-            return self._pengajar_model.getPengajar(source_index.row())  # pyright: ignore[reportAny]
+            return self._pengajar_model.fnGetByIndex(source_index.row())
 
         return None
 
+    # TODO: return object Pengajar
     @Slot(int, result="QVariant")  # pyright: ignore[reportAny, reportArgumentType]
     def getPengajarFromSourceIndex(self, source_row: int):
         """Mengambil data pengajar dengan aman menggunakan indexks dari source model."""
         if 0 <= source_row < self._pengajar_model.rowCount():
-            return self._pengajar_model.getPengajar(source_row)  # pyright: ignore[reportAny]
+            return self._pengajar_model.fnGetByIndex(source_row)
 
         return None

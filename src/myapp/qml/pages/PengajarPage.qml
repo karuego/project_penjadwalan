@@ -24,6 +24,11 @@ Page {
     property CustomDialog alertDialogRef
 
     property var contextBridgeRef: contextBridge // qmllint disable unqualified
+    property var pengajarModelRef: contextBridgeRef.pengajarModel
+    property var pengajarProxyRef: contextBridgeRef.pengajarProxy
+
+    // property string reloadMessage: "Memuat ulang database"
+    // property var reloadFunc: () => pengajarModelRef.reload()
 
     ColumnLayout {
         id: mainContainer
@@ -59,7 +64,7 @@ Page {
             }
 
             onClicked: {
-                root.stackViewRef.push("DetailPengajarPage.qml");
+                root.stackViewRef.push("PengajarActionPage.qml");
             }
         }
 
@@ -313,7 +318,7 @@ Page {
                                         }
 
                                         Label {
-                                            text: Hari.fromNumberToJoinedText(item.waktu) || "--"
+                                            text: Hari.parseHariToJoinedText(item.waktu) || "--"
                                             font.pixelSize: 13
                                             color: "#555"
                                         }
@@ -338,7 +343,7 @@ Page {
 
                                         onClicked: {
                                             root.stackViewRef.push// qmllint disable unqualified
-                                            ("DetailPengajarPage.qml", {
+                                            ("PengajarActionPage.qml", {
                                                 action: "view",
                                                 pengajarId: item.id_
                                             });
@@ -352,7 +357,7 @@ Page {
 
                                         onClicked: {
                                             root.stackViewRef.push// qmllint disable unqualified
-                                            ("DetailPengajarPage.qml", {
+                                            ("PengajarActionPage.qml", {
                                                 action: "edit",
                                                 pengajarId: item.id_
                                             });

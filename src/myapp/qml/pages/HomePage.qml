@@ -79,7 +79,7 @@ Page {
             Button {
                 text: qsTr("Buat Jadwal")
                 Layout.fillWidth: true
-                onClicked: root.stackViewRef.push("BuatJadwalPage.qml")
+                onClicked: root.stackViewRef.push("JadwalPage.qml")
                 Material.roundedScale: Material.NotRounded
                 scale: activeFocus || hovered ? 1.05 : 1.0
                 Behavior on scale {

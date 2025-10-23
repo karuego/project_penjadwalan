@@ -3,12 +3,15 @@ import QtQuick.Window
 import QtQuick.Layouts
 import QtQuick.Controls
 import QtQuick.Controls.Material
+import QtQml
 
 import "../components"
 import Theme // qmllint disable import
+import "../helpers/Hari.js" as Hari
 
 Page {
     id: root
+    objectName: "waktuPage"
     title: "Daftar Waktu"
 
     // readonly property size textFieldSize: Qt.size(150, 55)
@@ -17,7 +20,12 @@ Page {
     property CustomDialog confirmDialogRef
     property CustomDialog alertDialogRef
 
-    property var waktuModelRef: contextBridge.waktuModel // qmllint disable unqualified
+    property var contextBridgeRef: contextBridge // qmllint disable unqualified
+    property var waktuModelRef: contextBridgeRef.waktuModel
+    property var waktuProxyRef: contextBridgeRef.waktuProxy
+
+    property string reloadMessage: "Memuat ulang database..."
+    property var reloadFunc: () => waktuModelRef.reload()
 
     ColumnLayout {
         spacing: 10
@@ -155,7 +163,13 @@ Page {
                     const jamSelesaiStr = labelSelesaiJam.text + ":" + labelSelesaiMenit.text;
 
                     // Panggil slot addWaktu di model Python
-                    root.waktuModelRef.addWaktu(comboBoxHari.currentText, jamMulaiStr, jamSelesaiStr);
+                    const result = root.waktuModelRef.addWaktu(comboBoxHari.currentIndex + 1, jamMulaiStr, jamSelesaiStr);
+                    if (!result.success) {
+                        root.alertDialogRef.openWithCallback("Peringatan", result.message, null, null);
+                    } else
+                    // root.waktuModelRef.refreshModel();
+                    // listView.gotoEnd();
+                    {}
 
                     // Logika untuk memajukan waktu input
                     if (spinMulaiJam.value >= 23 && spinMulaiMenit.value >= 0) {
@@ -168,6 +182,46 @@ Page {
                 }
             }
         }
+
+        // qmllint disable
+        SortFilterProxyModel {
+            id: proxy
+            model: root.waktuModelRef
+            sorters: [
+                RoleSorter {
+                    roleName: "hari"
+                    priority: 0
+                },
+                StringSorter {
+                    roleName: "mulai"
+                    priority: 1
+                }
+                /*FunctionSorter {
+                    id: functionSorter
+                    component RoleData: QtObject {
+                        property int id_
+                        property int hari
+                        property string mulai
+                        property string selesai
+                    }
+                    //function sort(lhsData: RoleData, rhsData: RoleData) : int {
+                    function sort(lhsData: TimeSlot, rhsData: TimeSlot): int {
+                        return (lhsData.hari < rhsData.hari) ? -1 : ((lhsData === rhsData.hari) ? 0 : 1);
+                    }
+                }*/
+
+
+            ]
+            filters: [
+                FunctionFilter {
+                    function filter(data: TimeSlot): bool {
+                        //return data.hari == 2
+                        return true;
+                    }
+                }
+            ]
+        }
+        // qmllint enable
 
         Rectangle {
             id: kotakList
@@ -189,7 +243,9 @@ Page {
                     boundsBehavior: Flickable.StopAtBounds
                     clip: true
 
-                    model: root.waktuModelRef
+                    // model: root.waktuModelRef
+                    //model: root.waktuProxyRef
+                    model: proxy
 
                     delegate: ItemDelegate {
                         id: item
@@ -198,13 +254,14 @@ Page {
 
                         required property int index
                         required property int id_
+                        // TODO: Ganti string menjadi int, dan dapatkan nama hari dari class Hari di Python
                         required property string hari
                         required property string mulai
                         required property string selesai
 
                         Label {
                             id: hariLabel
-                            text: item.hari
+                            text: Hari.getNama(item.hari)
                             font.pixelSize: 18
                             font.bold: true
                         }
@@ -226,11 +283,11 @@ Page {
                             anchors.rightMargin: 16
 
                             onClicked: {
-                                const message = `Apakah anda ingin menghapus waktu: \nHari: "${item.hari}".\nWaktu: ${item.mulai} - ${item.selesai}"`;
+                                const message = `Apakah anda ingin menghapus waktu: \nHari: "${Hari.getNama(item.hari)}".\nWaktu: ${item.mulai} - ${item.selesai}"`;
 
                                 // qmllint disable unqualified
                                 root.confirmDialogRef.openWithCallback(qsTr("Konfirmasi penghapusan waktu"), message, function () {
-                                    root.waktuModelRef.removeWaktuById(id_);
+                                    root.waktuModelRef.removeId(id_);
                                 }, () => {});
                                 // qmllint enable unqualified
                             }
@@ -238,9 +295,28 @@ Page {
 
                         // ScrollIndicator.vertical: ScrollIndicator { }
                     }
+
+                    function gotoEnd() {
+                        // 'count' adalah jumlah item baru.
+                        // Karena indeks berbasis 0, indeks terakhir adalah 'count - 1'.
+                        // Pastikan ada item sebelum mencoba memposisikan.
+                        if (count > 0) {
+                            // 'positionViewAtIndex' akan menggulir daftar agar item
+                            // pada indeks yang diberikan terlihat.
+                            // 'ListView.End' memposisikannya di bagian bawah area pandang.
+                            positionViewAtIndex(count - 1, ListView.End);
+                        }
+                    }
                 }
             }
         }
+    }
+
+    component TimeSlot: QtObject {
+        property int id_
+        property int hari
+        property string mulai
+        property string selesai
     }
 
     function hitungDurasi() {

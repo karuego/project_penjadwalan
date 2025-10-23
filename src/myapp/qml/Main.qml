@@ -16,7 +16,12 @@ ApplicationWindow {
     height: 600
     title: qsTr("Aplikasi Penjadwalan w/ Simulated Annealing")
     // Material.theme: Material.Dark
-    // Material.accent: Material.Blue
+    Material.theme: Material.Light
+    Material.accent: Material.Indigo
+
+    property var contextBridgeRef: contextBridge // qmllint disable unqualified
+    property var currentStackViewItemRef: null
+    property bool isCurrentStackViewItemHasReloadFunc: false
 
     header: ToolBar {
         // background: Rectangle {
@@ -66,32 +71,61 @@ ApplicationWindow {
             font.pixelSize: 20
         }
 
-        // Tombol di pojok kanan untuk info
-        ToolButton {
-            text: "help"
-            // font.pixelSize: 24
-            font.pixelSize: activeFocus || hovered ? 32 : 24
-            font.family: AppTheme.materialFont
+        Row {
             anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            onClicked: infoDialog.open()
 
-            Behavior on font.pixelSize {
-                NumberAnimation {
-                    duration: 150
+            // Tombol reload
+            ToolButton {
+                id: refreshButton
+                text: "refresh"
+                font.pixelSize: activeFocus || hovered ? 32 : 24
+                font.family: AppTheme.materialFont
+                visible: root.isCurrentStackViewItemHasReloadFunc
+                onClicked: {
+                    enabled = false;
+
+                    // const result = root.currentStackViewItemReloadFunc(); //qmllint disable use-proper-function
+                    if (root.currentStackViewItemRef.hasOwnProperty('reloadMessage')) {
+                        snackbar.show(root.currentStackViewItemRef.reloadMessage, function () {
+                            enabled = true;
+                        });
+                        // snackbar2.text = "Reloading...";
+                        // snackbar2.actionText = "Ok";
+                        // snackbar2.open();
+                    }
+                    if (visible)
+                        root.currentStackViewItemRef.reloadFunc();
+                }
+
+                Behavior on font.pixelSize {
+                    NumberAnimation {
+                        duration: 150
+                    }
                 }
             }
+
+            // Tombol di pojok kanan untuk info
+            ToolButton {
+                text: "help"
+                font.pixelSize: activeFocus || hovered ? 32 : 24
+                font.family: AppTheme.materialFont
+                onClicked: infoDialog.open()
+
+                Behavior on font.pixelSize {
+                    NumberAnimation {
+                        duration: 150
+                    }
+                }
+            }
+
+            // IconButton {
+            //     iconName: "help"
+            //     // anchors.right: parent.right
+            //     // anchors.verticalCenter: parent.verticalCenter
+            //     onClicked: infoDialog.open()
+            //     // tooltipText: "Info"
+            // }
         }
-
-        // IconButton {
-        //     iconName: "help"
-        //     anchors.right: parent.right
-        //     anchors.verticalCenter: parent.verticalCenter
-        //     onClicked: infoDialog.open()
-        //     tooltipText: "Info"
-        // }
-
-        // }
     }
 
     // StackView adalah area di mana halaman-halaman akan ditampilkan
@@ -115,6 +149,11 @@ ApplicationWindow {
                 currentItem.confirmDialogRef = confirmDialog;
             if ("alertDialogRef" in currentItem)
                 currentItem.alertDialogRef = alertDialog;
+            if ("snackbarRef" in currentItem)
+                currentItem.snackbarRef = snackbar;
+
+            root.currentStackViewItemRef = currentItem;
+            root.isCurrentStackViewItemHasReloadFunc = currentItem.hasOwnProperty('reloadFunc');
         }
 
         Keys.onPressed: ev => {
@@ -137,17 +176,27 @@ ApplicationWindow {
         width: parent.width / 2
         height: parent.height / 1.5
 
-        Column {
+        ColumnLayout {
             Label {
                 text: qsTr("Aplikasi ini dibuat dengan QML.")
             }
 
-            Image {
-                source: "../assets/icon.jpg"
-                width: 100
-                height: 100
-                Layout.alignment: Qt.AlignHCenter
-                fillMode: Image.PreserveAspectCrop
+            // Image {
+            //     source: "../assets/icon.jpg"
+            //     width: 100
+            //     height: 100
+            //     Layout.alignment: Qt.AlignHCenter
+            //     fillMode: Image.PreserveAspectCrop
+            // }
+            AnimatedImage {
+                source: "../assets/evernight.gif"
+                cache: true
+                playing: true
+                // fillMode: Image.PreserveAspectCrop
+                Layout.preferredWidth: 220
+                Layout.preferredHeight: 220
+                // Layout.alignment: Qt.AlignHCenter
+                Layout.alignment: Qt.AlignCenter
             }
         }
     }
@@ -164,6 +213,49 @@ ApplicationWindow {
     CustomDialog {
         id: confirmDialog
         anchors.centerIn: parent
+        standardButtons: Dialog.NoButton
+        footer: DialogButtonBox {
+            Button {
+                text: "Ok"
+                onClicked: confirmDialog.accept()
+                font.pixelSize: activeFocus || hovered ? 14 : 12
+            }
+
+            Button {
+                id: cancelButton
+                text: "Cancel"
+                onClicked: confirmDialog.reject()
+                /*background: Rectangle {
+                    radius: 3
+                    color: parent.focus ? "lightBlue" : "#f0f0f0"
+                    border.color: parent.focus ? "dodgerblue" : "gray"
+                    border.width: 3
+                }*/
+                focus: true
+                font.pixelSize: activeFocus || hovered ? 14 : 12
+            }
+        }
+
+        onOpened: cancelButton.forceActiveFocus()
+    }
+
+    Snackbar {
+        id: snackbar
+
+        // Selalu letakkan di bawah dan di tengah
+        parent: ApplicationWindow.overlay // qmllint disable missing-property
+        //anchors.horizontalCenter: parent.horizontalCenter
+        // margins: 16
+    }
+
+    Snackbar2 {
+        id: snackbar2
+
+        // Selalu letakkan di bawah dan di tengah
+        parent: ApplicationWindow.overlay // qmllint disable missing-property
+        // anchors.bottom: parent.bottom
+        // anchors.horizontalCenter: parent.horizontalCenter
+        // margins: 16
     }
 
     /*TextArea {

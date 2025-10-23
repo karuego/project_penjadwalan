@@ -1,48 +1,15 @@
 from typing import override
 from PySide6.QtCore import QObject, Property
-
-NAMA_HARI: list[str] = [
-    "_",
-    "Senin",
-    "Selasa",
-    "Rabu",
-    "Kamis",
-    "Jumat",
-    "Sabtu",
-    "Minggu",
-]
-
-
-class Hari:
-    @staticmethod
-    def getNama(id: int) -> str | None:
-        if 0 < id < len(NAMA_HARI):
-            return NAMA_HARI[id]
-        return None
-
-    @staticmethod
-    def getId(nama: str) -> int:
-        target: str = nama.lower()
-
-        for i, s in enumerate(NAMA_HARI):
-            if s.lower() == target:
-                return i
-
-        return -1
-
-    @staticmethod
-    def getAll() -> list[str]:
-        return NAMA_HARI[1:]
+from .hari import Hari
 
 
 class TimeSlot(QObject):
     def __init__(
         self,
-        id: int = 0,
+        id: int = -1,
         hari: int = 0,
         mulai: str = "",
         selesai: str = "",
-        createdAt: str = "",
         parent: QObject | None = None,
     ):
         super().__init__(parent)
@@ -51,22 +18,30 @@ class TimeSlot(QObject):
         self._hari: int = hari
         self._mulai: str = mulai
         self._selesai: str = selesai
-        self._createdAt: str = createdAt
 
     def getId(self) -> int:
         return self._id
 
+    def setId(self, id: int) -> None:
+        self._id = id
+
     def getHari(self) -> int:
         return self._hari
+
+    def setHari(self, hari: int) -> None:
+        self._hari = hari
 
     def getMulai(self) -> str:
         return self._mulai
 
+    def setMulai(self, mulai: str) -> None:
+        self._mulai = mulai
+
     def getSelesai(self) -> str:
         return self._selesai
 
-    def getCreatedAt(self) -> str:
-        return self._createdAt
+    def setSelesai(self, selesai: str) -> None:
+        self._selesai = selesai
 
     def isEmpty(self) -> bool:
         if self._id <= 0:
@@ -93,10 +68,6 @@ class TimeSlot(QObject):
     def selesai(self) -> str:
         return self._selesai
 
-    @Property(str)
-    def createdAt(self) -> str:
-        return self._createdAt
-
     def __iter__(self):
         return iter(
             {
@@ -104,7 +75,6 @@ class TimeSlot(QObject):
                 "hari": self._hari,
                 "mulai": self._mulai,
                 "selesai": self._selesai,
-                "createdAt": self._createdAt,
             }.items()
         )
 
@@ -118,11 +88,9 @@ class TimeSlot(QObject):
                 return self._mulai
             case "selesai":
                 return self._selesai
-            case "createdAt":
-                return self._createdAt
             case _:
                 raise KeyError(f"Tidak ada atribut '{key}'")
 
     @override
     def __str__(self) -> str:
-        return f"TimeSlot(id={self._id}, hari={self._hari}, mulai={self._mulai}, selesai={self._selesai}, createdAt={self._createdAt})"
+        return f"TimeSlot(id={self._id}, hari={self._hari}, mulai={self._mulai}, selesai={self._selesai})"

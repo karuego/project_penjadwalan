@@ -1,14 +1,34 @@
-function fromNumber(teksAngka) {
-  const daftarHari = [
-    "Senin",
-    "Selasa",
-    "Rabu",
-    "Kamis",
-    "Jumat",
-    "Sabtu",
-    "Minggu",
-  ];
+const NAMA_HARI = [
+  "_",
+  "Senin",
+  "Selasa",
+  "Rabu",
+  "Kamis",
+  "Jumat",
+  "Sabtu",
+  "Minggu",
+];
 
+function getNama(id) {
+  if (0 < id && id < NAMA_HARI.length) return NAMA_HARI[id];
+  return None;
+}
+
+function getId(nama) {
+  const target = nama.toLowerCase();
+
+  NAMA_HARI.forEach((item, index) => {
+    if (s.toLowerCase() == target) return i;
+  });
+
+  return -1;
+}
+
+function getAll() {
+  return NAMA_HARI.slice(1);
+}
+
+function parseHari(teksAngka) {
   if (!teksAngka || typeof teksAngka !== "string" || teksAngka.trim() === "") {
     return [];
   }
@@ -19,14 +39,14 @@ function fromNumber(teksAngka) {
       const angka = parseInt(angkaStr.trim(), 10);
 
       if (angka >= 1 && angka <= 7) {
-        return daftarHari[angka - 1];
+        return getNama(angka);
       }
       return null;
     })
     .filter(Boolean);
 }
 
-function fromNumberToJoinedText(teksAngka) {
-  const arrayHari = fromNumber(teksAngka);
+function parseHariToJoinedText(teksAngka) {
+  const arrayHari = parseHari(teksAngka);
   return arrayHari.join(", ");
 }

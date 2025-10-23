@@ -1,8 +1,9 @@
-import sqlite3
 import typing
+import sqlite3
+from datetime import datetime
 from .database_manager import DatabaseManager
-from .timeslot_validator import TimeSlotValidator
-from .waktu import Hari, TimeSlot
+from .hari import Hari
+from .struct_waktu import TimeSlot
 
 
 class TimeSlotManager:
@@ -127,16 +128,22 @@ class TimeSlotManager:
                 )
             else:
                 _ = cursor.execute("""
-                    SELECT id, hari, start_time, end_time, created_at
+                    SELECT id, hari, start_time, end_time
                     FROM timeslots
                     ORDER BY hari, start_time
                 """)
 
             # return cursor.fetchall()
-            res: list[tuple[int, int, str, str, str]] | None = cursor.fetchall()
+            res: list[tuple[int, int, str, str]] | None = cursor.fetchall()
             if not res:
                 return []
-            return [TimeSlot(*row) for row in res]
+
+            waktu: list[TimeSlot] = []
+            for item in res:
+                waktu.append(
+                    TimeSlot(id=item[0], hari=item[1], mulai=item[2], selesai=item[3])
+                )
+            return waktu
 
     def get_timeslot_by_id(self, timeslot_id: int) -> TimeSlot | None:
         """Mendapatkan timeslot berdasarkan ID"""
@@ -154,9 +161,7 @@ class TimeSlotManager:
             res = typing.cast(tuple[int, int, str, str, str] | None, cursor.fetchone())
             if not res:
                 return None
-            return TimeSlot(
-                id=res[0], hari=res[1], mulai=res[2], selesai=res[3], createdAt=res[4]
-            )
+            return TimeSlot(id=res[0], hari=res[1], mulai=res[2], selesai=res[3])
 
     def delete_timeslot(self, timeslot_id: int) -> tuple[bool, str]:
         """Menghapus timeslot"""
@@ -170,7 +175,7 @@ class TimeSlotManager:
                     (timeslot_id,),
                 )
 
-                res: tuple[int, str, str] | None = cursor.fetchone()
+                res: tuple[int, str, str] | None = cursor.fetchone()  # pyright: ignore[reportAny]
 
                 if not res:
                     return False, "Timeslot tidak ditemukan"
@@ -212,3 +217,33 @@ class TimeSlotManager:
             return True, "Semua timeslots berhasil dihapus"
         except sqlite3.Error as e:
             return False, f"Database error: {str(e)}"
+
+
+class TimeSlotValidator:
+    @staticmethod
+    def time_to_minutes(time_str: str) -> int:
+        """Konversi waktu string ke menit"""
+        try:
+            hours, minutes = map(int, time_str.split(":"))
+            return hours * 60 + minutes
+        except (ValueError, AttributeError):
+            raise ValueError(f"Format waktu tidak valid: {time_str}")
+
+    @staticmethod
+    def is_overlap(start1: str, end1: str, start2: str, end2: str) -> bool:
+        """Cek apakah dua rentang waktu overlap"""
+        s1 = TimeSlotValidator.time_to_minutes(start1)
+        e1 = TimeSlotValidator.time_to_minutes(end1)
+        s2 = TimeSlotValidator.time_to_minutes(start2)
+        e2 = TimeSlotValidator.time_to_minutes(end2)
+
+        return s1 < e2 and e1 > s2
+
+    @staticmethod
+    def validate_time_format(time_str: str) -> bool:
+        """Validasi format waktu HH:MM"""
+        try:
+            _ = datetime.strptime(time_str, "%H:%M")
+            return True
+        except ValueError:
+            return False

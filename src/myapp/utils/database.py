@@ -1,7 +1,7 @@
 import os
-from .database_manager import DatabaseManager
-from .timeslot_manager import TimeSlotManager
+from .waktu_util import TimeSlotManager
 from .schedule_generator import ScheduleGenerator
+from .database_manager import DatabaseManager
 
 
 class Database:

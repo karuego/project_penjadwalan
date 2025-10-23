@@ -10,6 +10,9 @@ from PySide6.QtCore import (
     QPersistentModelIndex,
 )
 
+from utils import Database  # pyright: ignore[reportImplicitRelativeImport]
+from utils import Pengajar  # pyright: ignore[reportImplicitRelativeImport]
+
 
 class PengajarModel(QAbstractListModel):
     ID_ROLE: int = int(Qt.ItemDataRole.UserRole) + 1
@@ -17,12 +20,16 @@ class PengajarModel(QAbstractListModel):
     TIPE_ROLE: int = int(Qt.ItemDataRole.UserRole) + 3
     WAKTU_ROLE: int = int(Qt.ItemDataRole.UserRole) + 4
 
-    def __init__(
-        self, data: list[dict[str, str]] | None = None, parent: QObject | None = None
-    ):
+    def __init__(self, db: Database, parent: QObject | None = None):
         super().__init__(parent)
-        self._data: list[dict[str, str]] = data or []
-        self._filtered: list[dict[str, str]] = list(self._data)
+        self.db: Database = db
+
+        self._data: list[Pengajar] = []
+        self._filtered: list[Pengajar] = []
+
+    def setDataPengajar(self, data: list[Pengajar]) -> None:
+        self._data = data
+        self._filtered = list(data)
 
     @typing.override
     def data(
@@ -40,16 +47,16 @@ class PengajarModel(QAbstractListModel):
             return None
 
         # item: dict[str, str] = self._data[idx.row()]
-        item: dict[str, str] = self._filtered[idx.row()]
+        item: Pengajar = self._filtered[idx.row()]
 
         if role == self.ID_ROLE:
-            return item["id_"]
+            return item.getId()
         if role == self.NAMA_ROLE:
-            return item["nama"]
+            return item.getNama()
         if role == self.TIPE_ROLE:
-            return item["tipe"]
+            return item.getTipe()
         if role == self.WAKTU_ROLE:
-            return item["waktu"]
+            return item.getWaktu()
         return None
 
     @typing.override
@@ -78,7 +85,7 @@ class PengajarModel(QAbstractListModel):
             self.WAKTU_ROLE: QByteArray(b"waktu"),
         }
 
-    @Slot(str, str)  # pyright: ignore[reportAny]
+    @Slot(str, str, str, str)  # pyright: ignore[reportAny]
     def add(self, id: str, nama: str, tipe: str, waktu: str) -> None:
         """
         Method untuk menambahkan pengajar baru ke model.
@@ -87,31 +94,34 @@ class PengajarModel(QAbstractListModel):
         self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
 
         # Tambahkan data baru ke list internal
-        self._data.append({"id": id, "nama": nama, "tipe": tipe, "waktu": waktu})
+        # self._data.append({"id": id, "nama": nama, "tipe": tipe, "waktu": waktu})
+        self._data.append(Pengajar(id, nama, tipe, waktu))
 
         # Memberi tahu view bahwa penambahan baris telah selesai
         self.endInsertRows()
 
     def getIndexById(self, id: str) -> int:
         for i, item in enumerate(self._data):
-            if item["id_"] == id:
+            if item.getId() == id:
                 return i
 
         return -1
 
-    @Slot(str, result="QVariantMap")  # pyright: ignore[reportAny, reportArgumentType]
-    def getById(self, id: str) -> dict[str, str]:
+    def fnGetById(self, id: str) -> Pengajar | None:
         """
         Method untuk mengambil data pengajar berdasarkan id.
         """
         for item in self._data:
-            if item["id_"] == id:
+            if item.getId() == id:
                 return item
 
-        return {}
+        return None
 
-    @Slot(int, result="QVariantMap")  # pyright: ignore[reportAny, reportArgumentType]
-    def getByIndex(self, index: int) -> dict[str, str]:
+    @Slot(str, result=QObject)  # pyright: ignore[reportAny]
+    def getById(self, id: str) -> Pengajar | None:
+        return self.fnGetById(id)
+
+    def fnGetByIndex(self, index: int) -> Pengajar | None:
         """
         Method untuk mengambil data pengajar berdasarkan index.
         """
@@ -119,16 +129,20 @@ class PengajarModel(QAbstractListModel):
         if 0 <= index < len(self._data):
             return self._data[index]
 
-        return {}
+        return None
 
-    @Slot(int, result="QVariantMap")  # pyright: ignore[reportAny, reportArgumentType]
-    def getFilteredByIndex(self, index: int) -> dict[str, str]:
+    @Slot(int, result=QObject)  # pyright: ignore[reportAny]
+    def getByIndex(self, index: int) -> Pengajar | None:
+        return self.fnGetByIndex(index)
+
+    @Slot(int, result=QObject)  # pyright: ignore[reportAny]
+    def getFilteredByIndex(self, index: int) -> Pengajar | None:
         if 0 <= index < self.rowCount():
             return self._filtered[index]
 
-        return {}
+        return None
 
-    @Slot(int)  # pyright: ignore[reportAny]
+    @Slot(str)  # pyright: ignore[reportAny]
     def removeById(self, id: str):
         """
         Method untuk menghapus pengajar berdasarkan id key.
@@ -138,8 +152,7 @@ class PengajarModel(QAbstractListModel):
         del self._data[index]
         self.endRemoveRows()
 
-    @Slot(int)  # pyright: ignore[reportAny]
-    def removeByIndex(self, index: int):
+    def fnRemoveByIndex(self, index: int) -> None:
         """
         Method untuk menghapus pengajar berdasarkan index.
         """
@@ -153,6 +166,10 @@ class PengajarModel(QAbstractListModel):
 
             # Memberi tahu view bahwa penghapusan baris telah selesai
             self.endRemoveRows()
+
+    @Slot(int)  # pyright: ignore[reportAny]
+    def removeByIndex(self, index: int) -> None:
+        self.fnRemoveByIndex(index)
 
     @Slot(str, str)  # pyright: ignore[reportAny]
     def filter(self, query: str, tipe: str):
@@ -172,29 +189,32 @@ class PengajarModel(QAbstractListModel):
             pattern = None  # Abaikan regex yg tdk valdi
 
         # Filter data
-        def cocok(item: dict[str, str]):
+        def cocok(p: Pengajar):
             nama_cocok = True
             tipe_cocok = True
 
             if pattern:
-                nama_cocok = bool(pattern.search(item["nama"].lower()))
+                nama_cocok = bool(pattern.search(p.getNama().lower()))
             if t != "semua":
-                tipe_cocok = item["tipe"].lower() == t
+                tipe_cocok = p.getTipe().lower() == t
 
             return nama_cocok and tipe_cocok
 
-        self._filtered = [item for item in self._data if cocok(item)]
+        self._filtered = []
+        for pengajar in self._data:
+            if cocok(pengajar):
+                self._filtered.append(pengajar)
 
         # self._filtered = [
-        #     item
-        #     for item in self._data
-        #     if (q in item["nama"].lower())
-        #     and (t == "semua" or item["tipe"].lower() == t)
+        #     pengajar
+        #     for pengajar in self._data
+        #     if (q in pengajar.getNama().lower())
+        #     and (t == "semua" or pengajar.getTipe().lower() == t)
         # ]
 
         self.endResetModel()
 
-    @Slot(str, str, str, str)  # pyright: ignore[reportAny]
+    @Slot(str, str, str, str, str)  # pyright: ignore[reportAny]
     def update(
         self,
         prev_id: str | None = None,
@@ -206,16 +226,16 @@ class PengajarModel(QAbstractListModel):
         if prev_id is None:
             return
 
-        for i, item in enumerate(self._data):
-            if item["id_"] == prev_id:
+        for i, pengajar in enumerate(self._data):
+            if pengajar.getId() == prev_id:
                 if id is not None:
-                    item["id_"] = id
+                    pengajar.setId(id)
                 if nama is not None:
-                    item["nama"] = nama
+                    pengajar.setNama(nama)
                 if tipe is not None:
-                    item["tipe"] = tipe
+                    pengajar.setTipe(tipe)
                 if waktu is not None:
-                    item["waktu"] = waktu
+                    pengajar.setWaktu(waktu)
 
                 # top = self.index(row, 0)
                 # bottom = self.index(row, 0)

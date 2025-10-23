@@ -1,5 +1,5 @@
-from .timeslot_manager import TimeSlotManager
-from .waktu import Hari
+from .waktu_util import TimeSlotManager
+from .hari import Hari
 
 
 class ScheduleGenerator:

@@ -1,7 +1,8 @@
 from .database_manager import DatabaseManager
-from .timeslot_manager import TimeSlotManager
+from .waktu_util import TimeSlotManager
 from .schedule_generator import ScheduleGenerator
-from .waktu import Hari, TimeSlot
+from .hari import Hari
+from .struct_waktu import TimeSlot
 
 
 # Contoh penggunaan dan testing

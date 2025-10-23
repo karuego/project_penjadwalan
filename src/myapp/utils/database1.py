@@ -1,6 +1,6 @@
 import sqlite3
 
-from . import Ruangan, Dosen, Waktu, MataKuliah, Pengampu, PreferensiDosen
+from .struktur import Ruangan, Dosen, Waktu, MataKuliah, Pengampu, PreferensiDosen
 
 DB_FILE = "jadwal.db"
 
