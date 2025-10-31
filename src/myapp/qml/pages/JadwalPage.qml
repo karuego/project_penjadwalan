@@ -3,6 +3,7 @@ import QtQuick.Window
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import "../components"
+import "../Theme"
 
 Page {
     id: root
@@ -40,7 +41,6 @@ Page {
                     property bool isActive: customField.activeFocus || mouseArea.containsMouse
 
                     width: parent.width
-                    // Gunakan properti 'isActive'
                     height: isActive ? 2 : 1
                     color: isActive ? Material.accent : "#888"
                     anchors.bottom: parent.bottom
@@ -60,7 +60,29 @@ Page {
         }
 
         BusyIndicator {
+            id: busyIndicator
             running: true
+
+            Label {
+                id: helpLabel
+                text: "help"
+                font.pixelSize: 24
+                font.family: AppTheme.materialFont
+                visible: false
+            }
         }
+
+        Timer {
+            id: timer
+            interval: 2000
+            onTriggered: {
+                busyIndicator.running = false;
+                helpLabel.visible = true;
+            }
+        }
+    }
+
+    Component.onCompleted: {
+        timer.start();
     }
 }

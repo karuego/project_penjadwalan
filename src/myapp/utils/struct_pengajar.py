@@ -1,5 +1,14 @@
+from enum import Enum
 from typing import override
 from PySide6.QtCore import QObject, Property
+
+
+# TODO: ganti jadi list[dict[str, str]]
+# [{ 'text': 'Dosen', 'value': 'dosen' }, { 'text': 'Asisten Dosen', 'value': 'asdos' }]
+# TIPE_PENGAJAR: list[str] = ["dosen", "asdos"]
+class TipePengajar(Enum):
+    DOSEN = "dosen"
+    ASDOS = "asdos"
 
 
 class Pengajar(QObject):
@@ -33,8 +42,11 @@ class Pengajar(QObject):
     def getTipe(self) -> str:
         return self._tipe
 
-    def setTipe(self, tipe: str) -> None:
+    def setTipe(self, tipe: str) -> bool:
+        if tipe not in TIPE_PENGAJAR:
+            return False
         self._tipe = tipe
+        return True
 
     def getWaktu(self) -> str:
         return self._waktu

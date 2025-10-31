@@ -7,6 +7,9 @@ run: py
 py:
 	uv run src/myapp/main.py
 
+watch:
+	@watchexec -w src/myapp -r -- uv run src/myapp/main.py
+
 py-watch:
 	@watchexec -w src/myapp -r -- uv run src/myapp/main.py
 

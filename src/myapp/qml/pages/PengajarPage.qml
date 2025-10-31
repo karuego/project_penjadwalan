@@ -3,7 +3,6 @@ import QtQuick.Controls
 import QtQuick.Window
 import QtQuick.Layouts
 import QtQuick.Controls.Material
-import QtQml.Models
 
 // import "../helpers/MaterialIcons.js" as MIcons
 import "../components"
@@ -65,30 +64,6 @@ Page {
 
             onClicked: {
                 root.stackViewRef.push("PengajarActionPage.qml");
-            }
-        }
-
-        ListModel {
-            id: fruitModel
-            ListElement {
-                name: "Apple"
-                color: "green"
-            }
-            ListElement {
-                name: "Cherry"
-                color: "red"
-            }
-            ListElement {
-                name: "Banana"
-                color: "yellow"
-            }
-            ListElement {
-                name: "Orange"
-                color: "orange"
-            }
-            ListElement {
-                name: "WaterMelon"
-                color: "pink"
             }
         }
 
@@ -171,31 +146,91 @@ Page {
 
             ComboBox {
                 id: filterComboBox
-                model: ["Semua", "Dosen", "Asisten dosen"]
+                popup.closePolicy: Popup.CloseOnEscape
+                popup.modal: false
 
-                // Saat pilihan berubah, panggil slot Python dari ContextBridge
-                onCurrentTextChanged: {
-                    if (currentText === model[2])
-                        // Kirim string kosong untuk menghapus filter
-                        // root.contextBridgeRef.filterPengajar("");
-                        root.contextBridgeRef.pengajarModel.filter(searchField.text, "asdos");
-                    else
-                        root.contextBridgeRef.pengajarModel.filter(searchField.text, currentText);
+                model: ListModel {
+                    ListElement {
+                        text: qsTr("Semua")
+                        value: "semua"
+                    }
+                    ListElement {
+                        text: qsTr("Dosen")
+                        value: "dosen"
+                    }
+                    ListElement {
+                        text: qsTr("Asisten Dosen")
+                        value: "asdos"
+                    }
+                }
+
+                textRole: "text"
+                valueRole: "value"
+                // currentIndex: 0
+                // displayText: "Tipe: " + currentText
+
+                // Saat item berubah, panggil function Python dari ContextBridge
+                onActivated: {
+                    // root.contextBridgeRef.filterPengajar("")
+                    root.contextBridgeRef.pengajarModel.filter(searchField.text, currentValue);
                 }
             }
         }
 
+        // qmllint disable
+        SortFilterProxyModel {
+            id: proxy
+            model: root.pengajarModelRef
+
+            sorters: [
+                // RoleSorter {
+                //     roleName: "tipe"
+                //     priority: 0
+                //     sortOrder: Qt.AscendingOrder
+                // },
+                RoleSorter {
+                    roleName: "nama"
+                    priority: 1
+                    sortOrder: Qt.AscendingOrder
+                }
+                // FunctionSorter {
+                //     id: sortTipe
+                //     function sort(lhsData: Pengajar, rhsData: Pengajar): int {
+                //         return (lhsData.tipe < rhsData.tipe) ? -1 : ((lhsData === rhsData.tipe) ? 0 : 1);
+                //     }
+                // }
+                // FunctionSorter {
+                //     id: sortNama
+                //     function sort(lhsData: Pengajar, rhsData: Pengajar): int {
+                //         return (lhsData.nama > rhsData.nama) ? -1 : ((lhsData !== rhsData.nama) ? 0 : 1);
+                //     }
+                // }
+            ]
+            // filters: [
+            //     FunctionFilter {
+            //         id: functionSorter
+            //         component TimeSlot: QtObject {
+            //             property int id_
+            //             property int hari
+            //             property string mulai
+            //             property string selesai
+            //         }
+            //         function filter(data: TimeSlot): bool {
+            //             //return data.hari == 2
+            //             return true;
+            //         }
+            //     }
+            // ]
+        }
+        // qmllint enable
+
         Rectangle {
             id: rectangle
-
-            // Gunakan Layout untuk mengatur ukuran dan posisi bingkai
             Layout.fillWidth: true
             Layout.fillHeight: true
-
-            // 2. Atur properti border
-            border.color: "#cccccc" // Warna garis border
-            border.width: 1        // Ketebalan garis border
-            radius: 8              // (Opsional) Buat sudutnya membulat
+            border.color: "#cccccc"
+            border.width: 1
+            radius: 8
 
             ScrollView {
                 id: scrollView
@@ -205,7 +240,8 @@ Page {
                 ListView {
                     id: listView
                     // model: root.contextBridgeRef.pengajarProxyModel
-                    model: root.contextBridgeRef.pengajarModel
+                    // model: root.contextBridgeRef.pengajarModel
+                    model: proxy
                     spacing: 8
                     clip: true
 
@@ -401,5 +437,19 @@ Page {
                 }
             }
         }
+    }
+
+    component TimeSlot: QtObject {
+        property string id_
+        property string nama
+        property string tipe
+        property string waktu
+    }
+
+    component Pengajar: QtObject {
+        property string id_
+        property string nama
+        property string tipe
+        property string waktu
     }
 }

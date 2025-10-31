@@ -96,15 +96,15 @@ class ContextBridge(QObject):
             Pengajar(
                 id="123000001", nama="Dr. Budi Santoso", tipe="dosen", waktu="1,2"
             ),
+            Pengajar(id="000000001", nama="Asisten 1", tipe="asdos", waktu="3,4"),
             Pengajar(
                 id="123000002", nama="Prof. Ika Wijayanti", tipe="dosen", waktu="2,3"
             ),
+            Pengajar(id="000000002", nama="Asisten 2", tipe="asdos", waktu="3,5"),
+            Pengajar(id="000000003", nama="Asisten 3", tipe="asdos", waktu="1,5"),
             Pengajar(
                 id="123000003", nama="Ahmad Abdullah, M.Kom", tipe="dosen", waktu=""
             ),
-            Pengajar(id="000000001", nama="Asisten 1", tipe="asdos", waktu="3,4"),
-            Pengajar(id="000000002", nama="Asisten 2", tipe="asdos", waktu="3,5"),
-            Pengajar(id="000000003", nama="Asisten 3", tipe="asdos", waktu="1,5"),
             Pengajar(id="000000004", nama="Asisten 4", tipe="asdos", waktu="1,2"),
             Pengajar(id="000000005", nama="Asisten 5", tipe="asdos", waktu="4,6"),
             Pengajar(id="000000006", nama="Asisten 6", tipe="asdos", waktu=""),

@@ -15,10 +15,14 @@ Page {
 
     property StackView stackViewRef
     property CustomDialog confirmDialogRef
+    property CustomDialog alertDialogRef
 
-    // qmllint disable unqualified
-    property var waktuModel: contextBridge.waktuModel
-    // qmllint enable unqualified
+    property var contextBridgeRef: contextBridge // qmllint disable unqualified
+    property var waktuModelRef: contextBridgeRef.waktuModel
+    property var waktuProxyRef: contextBridgeRef.pengajarProxy
+
+    // property string reloadMessage: "Memuat ulang database"
+    // property var reloadFunc: () => waktuModelRef.reload()
 
     ColumnLayout {
         spacing: 10
@@ -27,7 +31,7 @@ Page {
         Button {
             id: tambahMataKuliah
             text: "Tambah Mata Kuliah"
-            onClicked: root.stackViewRef.push("TambahMataKuliahPage.qml")
+            onClicked: root.stackViewRef.push("MataKuliahActionPage.qml")
             implicitHeight: 55
             Layout.alignment: Qt.AlignHCenter
         }
@@ -51,7 +55,7 @@ Page {
                     boundsBehavior: Flickable.StopAtBounds
                     clip: true
 
-                    model: root.waktuModel
+                    model: root.waktuModelRef
 
                     delegate: ItemDelegate {
                         id: item
@@ -59,9 +63,10 @@ Page {
                         // highlighted: ListView.isCurrentItem
 
                         required property int index
+                        required property int id_
                         required property string hari
-                        required property string jamMulai
-                        required property string jamSelesai
+                        required property string mulai
+                        required property string selesai
 
                         Label {
                             id: hariLabel
@@ -72,7 +77,7 @@ Page {
 
                         Label {
                             id: jamLabel
-                            text: item.jamMulai + " - " + item.jamSelesai
+                            text: item.mulai + " - " + item.selesai
                             anchors.top: hariLabel.bottom
                             anchors.topMargin: 2
                             font.pixelSize: 13
@@ -87,7 +92,7 @@ Page {
                             anchors.rightMargin: 16
 
                             onClicked: {
-                                const message = `Apakah anda ingin menghapus waktu: \nHari: "${item.hari}".\nWaktu: ${item.jamMulai} - ${item.jamSelesai}"`;
+                                const message = `Apakah anda ingin menghapus waktu: \nHari: "${item.hari}".\nWaktu: ${item.mulai} - ${item.selesai}"`;
 
                                 // qmllint disable unqualified
                                 root.confirmDialogRef.openWithCallback(qsTr("Konfirmasi penghapusan waktu"), message, function () {

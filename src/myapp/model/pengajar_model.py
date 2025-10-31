@@ -20,15 +20,15 @@ class PengajarModel(QAbstractListModel):
     TIPE_ROLE: int = int(Qt.ItemDataRole.UserRole) + 3
     WAKTU_ROLE: int = int(Qt.ItemDataRole.UserRole) + 4
 
+    _all_data: list[Pengajar] = []
+    _filtered: list[Pengajar] = []
+
     def __init__(self, db: Database, parent: QObject | None = None):
         super().__init__(parent)
         self.db: Database = db
 
-        self._data: list[Pengajar] = []
-        self._filtered: list[Pengajar] = []
-
     def setDataPengajar(self, data: list[Pengajar]) -> None:
-        self._data = data
+        self._all_data = list(data)
         self._filtered = list(data)
 
     @typing.override
@@ -40,13 +40,10 @@ class PengajarModel(QAbstractListModel):
         """
         Mengembalikan data untuk item dan role tertentu.
         """
-        # beri tahu type checker bahwa kita perlakukan index sebagai QModelIndex
-        idx = typing.cast(QModelIndex, index)
-
+        idx: QModelIndex = typing.cast(QModelIndex, index)
         if not idx.isValid():
             return None
 
-        # item: dict[str, str] = self._data[idx.row()]
         item: Pengajar = self._filtered[idx.row()]
 
         if role == self.ID_ROLE:
@@ -70,7 +67,7 @@ class PengajarModel(QAbstractListModel):
         if parent is None:
             parent = QModelIndex()
 
-        # return len(self._data)
+        # return len(self._all_data)
         return len(self._filtered)
 
     @typing.override
@@ -94,14 +91,14 @@ class PengajarModel(QAbstractListModel):
         self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
 
         # Tambahkan data baru ke list internal
-        # self._data.append({"id": id, "nama": nama, "tipe": tipe, "waktu": waktu})
-        self._data.append(Pengajar(id, nama, tipe, waktu))
+        # self._all_data.append({"id": id, "nama": nama, "tipe": tipe, "waktu": waktu})
+        self._all_data.append(Pengajar(id, nama, tipe, waktu))
 
         # Memberi tahu view bahwa penambahan baris telah selesai
         self.endInsertRows()
 
     def getIndexById(self, id: str) -> int:
-        for i, item in enumerate(self._data):
+        for i, item in enumerate(self._all_data):
             if item.getId() == id:
                 return i
 
@@ -111,7 +108,7 @@ class PengajarModel(QAbstractListModel):
         """
         Method untuk mengambil data pengajar berdasarkan id.
         """
-        for item in self._data:
+        for item in self._all_data:
             if item.getId() == id:
                 return item
 
@@ -126,8 +123,8 @@ class PengajarModel(QAbstractListModel):
         Method untuk mengambil data pengajar berdasarkan index.
         """
         # if 0 <= index < self.rowCount():
-        if 0 <= index < len(self._data):
-            return self._data[index]
+        if 0 <= index < len(self._all_data):
+            return self._all_data[index]
 
         return None
 
@@ -149,7 +146,7 @@ class PengajarModel(QAbstractListModel):
         """
         index: int = self.getIndexById(id)
         self.beginRemoveRows(QModelIndex(), index, index)
-        del self._data[index]
+        del self._all_data[index]
         self.endRemoveRows()
 
     def fnRemoveByIndex(self, index: int) -> None:
@@ -162,7 +159,7 @@ class PengajarModel(QAbstractListModel):
             self.beginRemoveRows(QModelIndex(), index, index)
 
             # Hapus data dari list internal
-            del self._data[index]
+            del self._all_data[index]
 
             # Memberi tahu view bahwa penghapusan baris telah selesai
             self.endRemoveRows()
@@ -172,7 +169,7 @@ class PengajarModel(QAbstractListModel):
         self.fnRemoveByIndex(index)
 
     @Slot(str, str)  # pyright: ignore[reportAny]
-    def filter(self, query: str, tipe: str):
+    def filter(self, query: str, tipe: str) -> None:
         """
         Filter data berdasarkan nama dan tipe.
         """
@@ -201,13 +198,13 @@ class PengajarModel(QAbstractListModel):
             return nama_cocok and tipe_cocok
 
         self._filtered = []
-        for pengajar in self._data:
+        for pengajar in self._all_data:
             if cocok(pengajar):
                 self._filtered.append(pengajar)
 
         # self._filtered = [
         #     pengajar
-        #     for pengajar in self._data
+        #     for pengajar in self._all_data
         #     if (q in pengajar.getNama().lower())
         #     and (t == "semua" or pengajar.getTipe().lower() == t)
         # ]
@@ -226,7 +223,7 @@ class PengajarModel(QAbstractListModel):
         if prev_id is None:
             return
 
-        for i, pengajar in enumerate(self._data):
+        for i, pengajar in enumerate(self._all_data):
             if pengajar.getId() == prev_id:
                 if id is not None:
                     pengajar.setId(id)
