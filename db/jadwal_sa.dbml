@@ -44,8 +44,8 @@ Table preferensi_waktu {
   //waktu_id integer [not null, ref: > waktu.id]
   //hindari bool [not null, default: true]
   hari integer [not null, note: '1: Senin, 2: Selasa, 3: Rabu, 4: Kamis, 5: Jumat, 6: Sabtu, 7: Minggu']
-  mulai text [not null, note: 'HH:MM']
-  selesai text [not null, note: 'HH:MM']
+  //mulai text [not null, note: 'HH:MM']
+  //selesai text [not null, note: 'HH:MM']
 }
 
 Ref {
