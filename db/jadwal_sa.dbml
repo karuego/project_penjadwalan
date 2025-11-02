@@ -6,12 +6,12 @@ Project jadwal_sa {
   Note: 'Penjadwalan mata kuliah menggunakan Simulated Annealing'
 }
 
-Table ruangan {
+// Blok waktu 45 menit
+Table waktu {
   id integer [pk, increment]
-  nama text [unique, not null]
-
-  // jenis: 'teori', 'praktek'
-  jenis text [not null, default: 'teori', note: 'Untuk membedakan perkuliahan di ruang kelas dengan di laboratorium']
+  hari integer [not null, note: '1: Senin, 2: Selasa, 3: Rabu, 4: Kamis, 5: Jumat, 6: Sabtu, 7: Minggu']
+  mulai text [not null, note: 'HH:MM']
+  selesai text [not null, note: 'HH:MM']
 }
 
 Table pengajar {
@@ -29,6 +29,29 @@ Table mata_kuliah {
   // jumlah_sesi integer [not null, default: 0]
 }
 
+Table ruangan {
+  id integer [pk, increment]
+  nama text [unique, not null]
+
+  // jenis: 'teori', 'praktek'
+  jenis text [not null, default: 'teori', note: 'Untuk membedakan perkuliahan di ruang kelas dengan di laboratorium']
+}
+
+Table preferensi_waktu {
+  Note: 'Hapus semua preferensi waktu dari seorang pengajar apabila pengajar tersebut dihapus dari tabel induk'
+  id integer [pk, increment]
+  pengajar_id integer [not null]
+  //waktu_id integer [not null, ref: > waktu.id]
+  //hindari bool [not null, default: true]
+  hari integer [not null, note: '1: Senin, 2: Selasa, 3: Rabu, 4: Kamis, 5: Jumat, 6: Sabtu, 7: Minggu']
+  mulai text [not null, note: 'HH:MM']
+  selesai text [not null, note: 'HH:MM']
+}
+
+Ref {
+  preferensi_waktu.pengajar_id > pengajar.id [delete: cascade, update: no action]
+}
+
 Table komponen_mk {
   id integer [pk, increment]
   mata_kuliah_id integer [not null, ref: > mata_kuliah.id]
@@ -39,25 +62,10 @@ Table komponen_mk {
   jumlah_sesi_praktikum integer [not null, default: 1, note: "Default 1, bisa 2 atau lebih"]
 }
 
-// Blok waktu 45 menit
-Table waktu {
-  id integer [pk, note: "gunakan id dari jam seperti 800, 845, 1115, 1130. untuk memudahkan validasi waktu baru. akan error apabila jam dan menit sudah terdaftar pada rentang waktu tertentu"]
-  hari text [not null]
-  jam_mulai time [not null, note: 'HH:MM']
-  jam_selesai time [not null, note: 'HH:MM']
-}
-
 Table pengampu {
   id integer [pk, increment]
   pengajar_id integer [ref: > pengajar.id]
   komponen_mk_id integer [not null, ref: > komponen_mk.id]
-}
-
-Table preferensi_pengajar {
-  id integer [pk, increment]
-  pengajar_id integer [not null, ref: > pengajar.id]
-  waktu_id integer [not null, ref: > waktu.id]
-  // hindari bool [not null, default: true]
 }
 
 Table jadwal {
@@ -69,8 +77,7 @@ Table jadwal {
 
   // jenis text [not null, default: 'teori']
 
-  // Nilai : 1 atau 2
-  sesi_ke integer [not null, note: "Sesi ke-berapa untuk praktikum"]
+  sesi_ke integer [not null, note: "Sesi ke-berapa untuk praktikum. Contoh: 1, 2"]
 
   waktu_id_start integer [not null, ref: > waktu.id]
   durasi_blok integer [not null]
