@@ -64,8 +64,8 @@ Table komponen_mk {
 
 Table pengampu {
   id integer [pk, increment]
-  pengajar_id integer [ref: > pengajar.id]
   komponen_mk_id integer [not null, ref: > komponen_mk.id]
+  pengajar_id integer [ref: > pengajar.id]
 }
 
 Table jadwal {
