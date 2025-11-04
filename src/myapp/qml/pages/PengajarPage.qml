@@ -205,6 +205,8 @@ Page {
                 //         return (lhsData.nama > rhsData.nama) ? -1 : ((lhsData !== rhsData.nama) ? 0 : 1);
                 //     }
                 // }
+
+
             ]
             // filters: [
             //     FunctionFilter {
@@ -244,43 +246,7 @@ Page {
                     model: proxy
                     spacing: 8
                     clip: true
-
                     boundsBehavior: Flickable.StopAtBounds
-
-                    // anchors.fill: parent // ListView mengisi seluruh area di dalam bingkai
-                    // PENTING: Gunakan properti Layout, bukan anchors
-                    //Layout.fillWidth: true  // Buat ListView mengisi lebar kolom
-                    //Layout.fillHeight: true // Buat ListView mengisi sisa tinggi kolom
-                    // implicitHeight: contentHeight
-
-                    // Kurangi jeda sebelum scroll dimulai.
-                    // Nilai defaultnya cukup tinggi. Coba atur ke 0 atau nilai kecil seperti 20.
-                    // pressDelay: 0
-
-                    // Atur seberapa cepat laju scroll melambat setelah di-flick.
-                    // Nilai default: 1500. Nilai lebih rendah = lebih licin.
-                    // flickDeceleration: 1000
-
-                    // Tambahkan WheelHandler untuk mengontrol scroll dari touchpad/mouse wheel
-                    /*WheelHandler {
-                        // Properti custom untuk mengatur kecepatan, agar mudah diubah.
-                        // Coba nilai antara 1.5 hingga 3.0 untuk merasakan perbedaannya.
-                        property real speedMultiplier: 50.0
-
-                        // Handler ini akan aktif setiap kali ada event scroll dari touchpad/wheel
-                        onWheel: (event) => {
-                            // Ambil nilai pergerakan vertikal dari touchpad (event.pixelDelta.y)
-                            // dan kalikan dengan pengali kecepatan kita.
-                            let scrollAmount = event.pixelDelta.y * speedMultiplier;
-
-                            // Ubah posisi konten ListView secara manual.
-                            listView.contentY += scrollAmount;
-
-                            // Beritahu sistem bahwa kita sudah menangani event ini.
-                            // Ini mencegah Flickable melakukan scroll default-nya (menghindari double scroll).
-                            event.accepted = true;
-                        }
-                    }*/
 
                     delegate: ItemDelegate {
                         id: item
@@ -298,7 +264,6 @@ Page {
                             width: parent.width
                             spacing: 0
 
-                            // Bagian konten (teks dan tombol)
                             RowLayout {
                                 // width: parent.width
 
@@ -354,7 +319,7 @@ Page {
                                         }
 
                                         Label {
-                                            text: Hari.parseHariToJoinedText(item.waktu) || "--"
+                                            text: Hari.parseHari(item.waktu).join(", ") || "--"
                                             font.pixelSize: 13
                                             color: "#555"
                                         }
@@ -378,11 +343,7 @@ Page {
                                         // tooltipText: "Edit"
 
                                         onClicked: {
-                                            root.stackViewRef.push// qmllint disable unqualified
-                                            ("PengajarActionPage.qml", {
-                                                action: "view",
-                                                pengajarId: item.id_
-                                            });
+                                            root.gotoActionPage("view", item.id_); // qmllint disable unqualified
                                         }
                                     }
 
@@ -391,13 +352,7 @@ Page {
                                         iconColor: "orange"
                                         // tooltipText: "Edit"
 
-                                        onClicked: {
-                                            root.stackViewRef.push// qmllint disable unqualified
-                                            ("PengajarActionPage.qml", {
-                                                action: "edit",
-                                                pengajarId: item.id_
-                                            });
-                                        }
+                                        onClicked: root.gotoActionPage("edit", item.id_) // qmllint disable unqualified
                                     }
 
                                     IconButton {
@@ -410,7 +365,11 @@ Page {
 
                                             root.confirmDialogRef.openWithCallback // qmllint disable unqualified
                                             (qsTr("Konfirmasi penghapusan pengajar"), message, () => {
-                                                root.contextBridgeRef.removePengajarFromIndex(item.index);
+                                                // root.contextBridgeRef.removePengajarFromIndex(item.index);
+                                                const result = root.pengajarModelRef.removeById(item.id_);
+                                                if (!result.success) {
+                                                    console.error("Failed to delete pengajar");
+                                                }
                                             }, null);
                                         }
                                     }
@@ -437,6 +396,13 @@ Page {
                 }
             }
         }
+    }
+
+    function gotoActionPage(action, idn) {
+        root.stackViewRef.push("PengajarActionPage.qml", {
+            action: action,
+            pengajarId: idn
+        });
     }
 
     component TimeSlot: QtObject {

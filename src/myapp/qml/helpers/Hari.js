@@ -11,7 +11,8 @@ const NAMA_HARI = [
 
 function getNama(id) {
   if (0 < id && id < NAMA_HARI.length) return NAMA_HARI[id];
-  return None;
+  // return None;
+  return "*Error*";
 }
 
 function getId(nama) {
@@ -49,4 +50,26 @@ function parseHari(teksAngka) {
 function parseHariToJoinedText(teksAngka) {
   const arrayHari = parseHari(teksAngka);
   return arrayHari.join(", ");
+}
+
+function parseHariMap(teksAngka) {
+  if (!teksAngka || typeof teksAngka !== "string" || teksAngka.trim() === "") {
+    return [];
+  }
+
+  return teksAngka
+    .split(",")
+    .map((angkaStr) => {
+      const angka = parseInt(angkaStr.trim(), 10);
+
+      if (angka >= 1 && angka <= 7) {
+        return {
+          id: angka,
+          nama: getNama(angka),
+        };
+      }
+
+      return null;
+    })
+    .filter(Boolean);
 }

@@ -4,9 +4,8 @@ import QtQuick.Window
 import QtQuick.Layouts
 import QtQuick.Controls.Material
 
-import "../helpers/Hari.js" as Hari
 import "../components"
-import Theme 1.0 // qmllint disable import
+import "../helpers/Hari.js" as Hari
 
 Page {
     id: root
@@ -24,22 +23,44 @@ Page {
     property string pengajarId: "-1"
 
     property var contextBridgeRef: contextBridge // qmllint disable unqualified
-    property var waktuModelRef: contextBridgeRef.waktuModel
-    property var namaNamaHariRef: contextBridgeRef.namaNamaHari
+    property var pengajarModelRef: contextBridgeRef.pengajarModel
 
-    property string nama
-    property string tipe
-    property string waktu
+    // Properti untuk menyimpan daftar semua hari
+    property var allDays: contextBridgeRef.namaNamaHariDict
+    // Properti untuk menyimpan daftar hari yang TERSEDIA untuk dipilih
+    property variant availableDays: []
 
     property bool isEdit: true
+    property string tipePengajar
 
     ColumnLayout {
         spacing: 8
         anchors.fill: parent
 
         TextField {
+            id: textFieldId
+            readOnly: !root.isEdit
+            placeholderText: radioDosen.checked ? qsTr("NIDN") : radioAsdos.checked ? qsTr("NIM") : qsTr("Id")
+            Accessible.name: qsTr("Input ID Pengajar")
+
+            validator: RegularExpressionValidator {
+                // Regex ini hanya mengizinkan digit (0-9).
+                // ^      -> Awal string
+                // [0-9]* -> Nol atau lebih karakter dari 0 sampai 9
+                // $      -> Akhir string
+                regularExpression: /^[0-9]*$/
+            }
+
+            // Material.containerStyle: Material.Filled
+            Material.containerStyle: Material.Outlined
+            background.implicitHeight: root.textFieldSize.height
+            background.implicitWidth: root.textFieldSize.width
+        }
+
+        TextField {
             id: textFieldNama
-            placeholderText: qsTr("Nama Pengajar")
+            readOnly: !root.isEdit
+            placeholderText: radioDosen.checked ? qsTr("Nama Dosen") : radioAsdos.checked ? qsTr("Nama Asisten Dosen") : qsTr("Nama Pengajar")
             Accessible.name: qsTr("Input Nama Pengajar")
             // Material.containerStyle: Material.Filled
             Material.containerStyle: Material.Outlined
@@ -55,44 +76,73 @@ Page {
         RowLayout {
             spacing: 15
 
-            RadioButton {
-                id: radioDosen
-                text: qsTr("Dosen")
-                checked: true
-                ButtonGroup.group: tipePengajarGroup
+            Label {
+                text: qsTr("Tipe Pengajar :")
+                font.pixelSize: 14
+                font.bold: true
             }
 
-            RadioButton {
-                id: radioAsdos
-                text: qsTr("Asisten Dosen")
-                ButtonGroup.group: tipePengajarGroup
+            RowLayout {
+                spacing: 15
+                visible: root.isEdit
+
+                RadioButton {
+                    id: radioDosen
+                    text: qsTr("Dosen")
+                    // checked: true
+                    ButtonGroup.group: tipePengajarGroup
+                    enabled: root.isEdit
+                }
+
+                RadioButton {
+                    id: radioAsdos
+                    text: qsTr("Asisten Dosen")
+                    ButtonGroup.group: tipePengajarGroup
+                    enabled: root.isEdit
+                }
+            }
+
+            Label {
+                visible: !root.isEdit
+                text: radioDosen.checked ? radioDosen.text : radioAsdos.text
+                font.pixelSize: 14
+                Layout.alignment: Qt.AlignVCenter
             }
         }
 
-        // TextField {
-        //     id: textFieldSks
-        //     placeholderText: qsTr("Jumlah SKS")
-        //     background.implicitHeight : root.textFieldSize.height
-        //     background.implicitWidth: root.textFieldSize.width
-        // }
+        Label {
+            text: qsTr("Pilih waktu yang dikecualikan :")
+            font.pixelSize: 14
+            font.bold: true
+            visible: root.isEdit
+        }
+
+        Label {
+            text: qsTr("Daftar waktu yang dikecualikan :")
+            font.pixelSize: 14
+            font.bold: true
+            visible: !root.isEdit
+        }
 
         RowLayout {
             id: tambahWaktu
             spacing: 8
             visible: root.isEdit
+            enabled: root.isEdit
 
             ComboBox {
-                id: comboBoxWaktu
+                id: comboBoxHari
                 background.implicitHeight: root.textFieldSize.height
                 background.implicitWidth: root.textFieldSize.width
-                // model: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
-                model: root.namaNamaHariRef
-                // onCurrentValueChanged:
+                model: root.availableDays
+                textRole: "hari"
+                valueRole: "idx"
             }
 
             Button {
                 id: btnTambahWaktu
                 text: qsTr("Tambah")
+                enabled: comboBoxHari.count > 0
                 hoverEnabled: true
                 Layout.alignment: Qt.AlignRight
                 implicitWidth: root.buttonSize.width
@@ -101,8 +151,33 @@ Page {
                 ToolTip.timeout: 5000
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("This tool tip is shown after hovering the button for a second.")
+
+                onClicked: {
+                    // Pastikan ada item yang bisa ditambahkan
+                    if (comboBoxHari.currentIndex > -1) {
+                        // Menambahkan objek ke ListModel
+                        selectedDaysModel.append({
+                            "idx": comboBoxHari.currentValue,
+                            "hari": comboBoxHari.currentText
+                        });
+                        // Perbarui ComboBox
+                        root.updateAvailableDays();
+                    }
+                }
             }
         }
+
+        // qmllint disable import missing-property
+        SortFilterProxyModel {
+            id: proxy
+            model: selectedDaysModel
+            sorters: [
+                RoleSorter {
+                    roleName: "idx"
+                }
+            ]
+        }
+        // qmllint enable
 
         Rectangle {
             id: kotakList
@@ -125,52 +200,59 @@ Page {
                     id: listView
                     spacing: 8
                     clip: true
-                    model: root.waktuModelRef
+                    model: proxy
 
                     delegate: ItemDelegate {
                         id: item
-                        width: parent.width
-                        highlighted: ListView.isCurrentItem
+                        width: ListView.view.width
+                        // highlighted: ListView.isCurrentItem
 
                         required property int index
+                        required property int idx
                         required property string hari
-                        required property string mulai
-                        required property string selesai
+                        // required property string mulai
+                        // required property string selesai
 
-                        Label {
-                            id: hariLabel
-                            text: Hari.getNama(item.hari)
-                            font.pixelSize: 18
-                            font.bold: true
-                        }
+                        // text: item.hari
 
-                        Label {
-                            id: jamLabel
-                            text: item.mulai + " - " + item.selesai
-                            anchors.top: hariLabel.bottom
-                            anchors.topMargin: 2
-                            font.pixelSize: 13
-                            color: "#555"
-                        }
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 10
+                            anchors.rightMargin: 5
 
-                        IconButton {
-                            iconName: "delete"
-                            iconColor: "red"
-                            // tooltipText: "Hapus"
-                            anchors.right: parent.right
-                            anchors.rightMargin: 16
-                            onClicked: {
-                                console.log(`Anda menghapus item: "${hariLabel.text}: ${jamLabel.text}"`);
+                            Label {
+                                id: hariLabel
+                                text: item.hari
+                                font.pixelSize: 14
+                                // font.bold: true
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                                verticalAlignment: Text.AlignVCenter
+                            }
 
-                                // confirmDialog.openWithText(`Hapus waktu: "${hariLabel.text}: ${jamLabel.text}"`);
+                            // Label {
+                            //     id: jamLabel
+                            //     text: item.mulai + " - " + item.selesai
+                            //     anchors.top: hariLabel.bottom
+                            //     anchors.topMargin: 2
+                            //     font.pixelSize: 13
+                            //     color: "#555"
+                            // }
+
+                            IconButton {
+                                iconName: "delete"
+                                iconColor: "red"
+                                ToolTip.text: "Hapus"
+                                Layout.rightMargin: 16
+                                enabled: root.isEdit // qmllint disable unqualified
+                                visible: enabled
+
+                                onClicked: {
+                                    // confirmDialog.openWithText(`Hapus waktu: "${hariLabel.text}: ${jamLabel.text}"`);
+                                    root.deleteDay(item.idx); // qmllint disable unqualified
+                                }
                             }
                         }
-
-                        onClicked: {
-                            console.log("Anda menekan item:", index, ":", hari);
-                        }
-
-                        // ScrollIndicator.vertical: ScrollIndicator { }
                     }
                 }
             }
@@ -182,6 +264,7 @@ Page {
             Material.background: Material.Blue
             Layout.alignment: Qt.AlignRight
             implicitWidth: root.buttonSize.width * 1.5
+            enabled: root.isEdit
             visible: root.isEdit
 
             // hoverEnabled: true
@@ -189,6 +272,24 @@ Page {
             ToolTip.timeout: 5000
             // ToolTip.visible: hovered
             ToolTip.text: qsTr("This tool tip is shown after hovering the button for a second.")
+
+            onClicked: {
+                const old_id = root.pengajarId;
+                const idn = textFieldId.text.trim();
+                const nama = textFieldNama.text.trim();
+                const tipe = radioDosen.checked ? "dosen" : radioAsdos.checked ? "asdos" : "unknown";
+                const waktu = root.getSelectedDays().join(",");
+                console.log("ID:", idn, "Nama:", nama, "Tipe:", tipe, "Waktu:", waktu);
+
+                let result = null;
+                if (root.action === "edit") {
+                    result = root.pengajarModelRef.update(old_id, idn, nama, tipe, waktu);
+                } else {
+                    result = root.pengajarModelRef.add(idn, nama, tipe, waktu);
+                }
+
+                root.stackViewRef.pop();
+            }
         }
 
         /*Button {
@@ -293,7 +394,46 @@ Page {
         }*/
     }
 
-    Component.onCompleted: {
+    ListModel {
+        id: selectedDaysModel
+    }
+
+    function deleteDay(idx) {
+        for (let i = 0; i < selectedDaysModel.count; i++) {
+            if (selectedDaysModel.get(i).idx === idx) {
+                selectedDaysModel.remove(i, 1);
+                break;
+            }
+        }
+
+        updateAvailableDays();
+    }
+
+    function getSelectedDays() {
+        let selectedDays = [];
+        for (let i = 0; i < selectedDaysModel.count; i++) {
+            selectedDays.push(selectedDaysModel.get(i).idx);
+        }
+        return selectedDays;
+    }
+
+    // Fungsi untuk memperbarui daftar hari yang tersedia di ComboBox
+    function updateAvailableDays() {
+        // 1. Dapatkan semua 'idx' yang sudah dipilih dari ListModel
+        const selectedDays = getSelectedDays();
+
+        // 2. Filter 'allDays' berdasarkan 'idx' yang BELUM ada di 'selectedDays'
+        availableDays = allDays.filter(function (dayObj) {
+            return !selectedDays.includes(dayObj.idx);
+        });
+
+        // 3. Setel ulang indeks ComboBox jika item saat ini tidak lagi tersedia
+        if (comboBoxHari.currentIndex >= availableDays.length) {
+            comboBoxHari.currentIndex = 0;
+        }
+    }
+
+    function setup() {
         if (action == "view") {
             root.title = "Detail Pengajar";
             isEdit = false;
@@ -303,17 +443,24 @@ Page {
             return;
 
         // const pengajar = contextBridgeRef.getPengajarFromProxyIndex(pengajarId);
-        const pengajar = contextBridgeRef.pengajarModel.getById(pengajarId);
+        // const pengajar = contextBridgeRef.pengajarModel.getById(pengajarId);
+        const pengajar = root.pengajarModelRef.getById(root.pengajarId);
 
         if (!pengajar) {
             console.log('Pengajar tidak ditemukan');
             return;
         }
 
+        if (pengajar.id) {
+            textFieldId.text = pengajar.id;
+        }
+
         if (pengajar.nama)
             textFieldNama.text = pengajar.nama;
 
         if (pengajar.tipe) {
+            root.tipePengajar = pengajar.tipe;
+
             if (pengajar.tipe === "dosen")
                 radioDosen.checked = true;
             else if (pengajar.tipe === "asdos")
@@ -321,6 +468,20 @@ Page {
             // tipeField.currentIndex = tipeField.model.indexOf(pengajar.tipe);
         }
 
-        // if (pengajar.waktu) waktuField.text = data.waktu;
+        const waktu = pengajar.waktu.trim();
+        const hariObjList = Hari.parseHariMap(waktu);
+
+        for (const hariObj of hariObjList) {
+            selectedDaysModel.append({
+                "idx": hariObj.id,
+                "hari": hariObj.nama
+            });
+        }
+    }
+
+    // Panggil fungsi ini saat komponen selesai dimuat untuk inisialisasi
+    Component.onCompleted: {
+        setup();
+        updateAvailableDays();
     }
 }

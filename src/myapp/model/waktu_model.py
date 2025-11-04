@@ -185,7 +185,7 @@ class WaktuModel(QAbstractListModel):
         self.fnRemoveIndex(index)
 
     def fnRemoveId(self, id: int) -> None:
-        """Method untuk menghapus pengajar berdasarkan id dari QML."""
+        """Method untuk menghapus waktu berdasarkan id."""
         index: int = self.getIndexById(id)
 
         self.beginRemoveRows(QModelIndex(), index, index)

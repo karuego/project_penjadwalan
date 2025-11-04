@@ -1,3 +1,4 @@
+import re
 from enum import Enum
 from typing import override
 from PySide6.QtCore import QObject, Property
@@ -5,7 +6,9 @@ from PySide6.QtCore import QObject, Property
 
 # TODO: ganti jadi list[dict[str, str]]
 # [{ 'text': 'Dosen', 'value': 'dosen' }, { 'text': 'Asisten Dosen', 'value': 'asdos' }]
-# TIPE_PENGAJAR: list[str] = ["dosen", "asdos"]
+TIPE_PENGAJAR: list[str] = ["dosen", "asdos"]
+
+
 class TipePengajar(Enum):
     DOSEN = "dosen"
     ASDOS = "asdos"
@@ -22,37 +25,39 @@ class Pengajar(QObject):
     ):
         super().__init__(parent)
 
-        self._id: str = id
-        self._nama: str = nama
-        self._tipe: str = tipe
-        self._waktu: str = waktu
+        self._id: str = id.strip()
+        self._nama: str = nama.strip()
+        self._tipe: str = tipe.strip().lower()
+        self._waktu: str = re.sub(r"\s+", "", waktu.strip())
 
     def getId(self) -> str:
         return self._id
 
     def setId(self, id: str) -> None:
-        self._id = id
+        self._id = id.strip()
 
     def getNama(self) -> str:
         return self._nama
 
     def setNama(self, nama: str) -> None:
-        self._nama = nama
+        self._nama = nama.strip()
 
     def getTipe(self) -> str:
         return self._tipe
 
     def setTipe(self, tipe: str) -> bool:
-        if tipe not in TIPE_PENGAJAR:
+        # TODO:
+        t: str = tipe.strip().lower()
+        if t not in TIPE_PENGAJAR:
             return False
-        self._tipe = tipe
+        self._tipe = t
         return True
 
     def getWaktu(self) -> str:
         return self._waktu
 
     def setWaktu(self, waktu: str) -> None:
-        self._waktu = waktu
+        self._waktu = re.sub(r"\s+", "", waktu.strip())
 
     def isValid(self) -> bool:
         if (
@@ -78,7 +83,7 @@ class Pengajar(QObject):
 
     @Property(str)
     def waktu(self) -> str:
-        return self._waktu
+        return re.sub(r"\s+", "", self._waktu.strip())
 
     def __iter__(self):
         return iter(
@@ -105,4 +110,4 @@ class Pengajar(QObject):
 
     @override
     def __str__(self) -> str:
-        return f"TimeSlot(id={self._id}, nama={self._nama}, tipe={self._tipe}, waktu={self._waktu})"
+        return f'Pengajar(id="{self._id}", nama="{self._nama}", tipe="{self._tipe}", waktu="{self._waktu}")'
