@@ -28,8 +28,8 @@ class WaktuModel(QAbstractListModel):
 
     def __init__(self, db: Database, parent: QObject | None = None):
         super().__init__(parent)
-        self._data: list[TimeSlot] = []
         self._db: Database = db
+        self._data: list[TimeSlot] = []
 
     @typing.override
     def data(
@@ -70,6 +70,35 @@ class WaktuModel(QAbstractListModel):
             self.SELESAI_ROLE: QByteArray(b"selesai"),
         }
 
+    def addTimeslotToList(self, timeslot: TimeSlot) -> None:
+        """Method untuk menambahkan timeslot ke database."""
+        self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
+        self._data.append(timeslot)
+        self.endInsertRows()
+
+    def addTimeslotToDatabase(self, timeslot: TimeSlot) -> tuple[bool, str]:
+        """Method untuk menambahkan timeslot ke database."""
+        success, timeslot_id, message = self._db.timeslot_manager.add_timeslot(
+            timeslot.getHari(), timeslot.getMulai(), timeslot.getSelesai()
+        )
+        if success:
+            timeslot.setId(typing.cast(int, timeslot_id))
+
+        return success, message
+
+    # TODO: pisahkan logika untuk memuat data dari database dari model
+    def loadDatabase(self) -> None:
+        all_timeslots: list[TimeSlot] = self._db.timeslot_manager.get_all_timeslots()
+        for timeslot in all_timeslots:
+            self.addTimeslotToList(timeslot)
+
+    @Slot()  # pyright: ignore[reportAny]
+    def reload(self) -> None:
+        self.beginResetModel()
+        self._data.clear()
+        self.loadDatabase()
+        self.endResetModel()
+
     @Slot(str, str, str)  # pyright: ignore[reportAny]
     def addData(self, hari: int, mulai: str, selesai: str) -> None:
         posisi = 0
@@ -87,18 +116,6 @@ class WaktuModel(QAbstractListModel):
         self._data.insert(posisi, new_item)
         self.endInsertRows()
 
-    @Slot(int, str, str, result="QVariant")  # pyright: ignore[reportAny, reportArgumentType]
-    def addWaktu(self, hari: int, mulai: str, selesai: str) -> dict[str, bool | str]:
-        """Method untuk menambahkan waktu baru."""
-        timeslot: TimeSlot = TimeSlot(
-            hari=hari,
-            mulai=mulai,
-            selesai=selesai,
-        )
-
-        success, message = self.addTimeslot(timeslot)
-        return {"success": success, "message": message}
-
     def addTimeslot(self, timeslot: TimeSlot) -> tuple[bool, str]:
         """Method untuk menambahkan timeslot ke database."""
         success = True
@@ -112,33 +129,17 @@ class WaktuModel(QAbstractListModel):
 
         return success, message
 
-    def addTimeslotToList(self, timeslot: TimeSlot) -> None:
-        """Method untuk menambahkan timeslot ke database."""
-        self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
-        self._data.append(timeslot)
-        self.endInsertRows()
-
-    def addTimeslotToDatabase(self, timeslot: TimeSlot) -> tuple[bool, str]:
-        """Method untuk menambahkan timeslot ke database."""
-        success, timeslot_id, message = self._db.timeslot_manager.add_timeslot(
-            timeslot.getHari(), timeslot.getMulai(), timeslot.getSelesai()
+    @Slot(int, str, str, result="QVariant")  # pyright: ignore[reportAny, reportArgumentType]
+    def addWaktu(self, hari: int, mulai: str, selesai: str) -> dict[str, bool | str]:
+        """Method untuk menambahkan waktu baru."""
+        timeslot: TimeSlot = TimeSlot(
+            hari=hari,
+            mulai=mulai,
+            selesai=selesai,
         )
-        if success:
-            timeslot.setId(typing.cast(int, timeslot_id))
 
-        return success, message
-
-    def loadDatabase(self) -> None:
-        all_timeslots: list[TimeSlot] = self._db.timeslot_manager.get_all_timeslots()
-        for timeslot in all_timeslots:
-            self.addTimeslotToList(timeslot)
-
-    @Slot()  # pyright: ignore[reportAny]
-    def reload(self) -> None:
-        self.beginResetModel()
-        self._data.clear()
-        self.loadDatabase()
-        self.endResetModel()
+        success, message = self.addTimeslot(timeslot)
+        return {"success": success, "message": message}
 
     def fnGetIndex(self, index: int) -> TimeSlot | None:
         if 0 <= index < len(self._data):
