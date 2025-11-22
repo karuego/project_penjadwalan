@@ -188,16 +188,17 @@ ApplicationWindow {
             //     Layout.alignment: Qt.AlignHCenter
             //     fillMode: Image.PreserveAspectCrop
             // }
-            AnimatedImage {
-                source: "../assets/evernight.gif"
-                cache: true
-                playing: true
-                // fillMode: Image.PreserveAspectCrop
-                Layout.preferredWidth: 220
-                Layout.preferredHeight: 220
-                // Layout.alignment: Qt.AlignHCenter
-                Layout.alignment: Qt.AlignCenter
-            }
+
+            // AnimatedImage {
+            //     source: "../assets/evernight.gif"
+            //     cache: true
+            //     playing: true
+            //     // fillMode: Image.PreserveAspectCrop
+            //     Layout.preferredWidth: 220
+            //     Layout.preferredHeight: 220
+            //     // Layout.alignment: Qt.AlignHCenter
+            //     Layout.alignment: Qt.AlignCenter
+            // }
         }
     }
 

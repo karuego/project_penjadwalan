@@ -1,6 +1,6 @@
 version = 1
 revision = 3
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 
 [[package]]
 name = "myapp"
@@ -8,6 +8,8 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "pyside6" },
+    { name = "result" },
+    { name = "rustedpy-maybe" },
 ]
 
 [package.dev-dependencies]
@@ -17,7 +19,11 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pyside6" }]
+requires-dist = [
+    { name = "pyside6" },
+    { name = "result", specifier = ">=0.17.0" },
+    { name = "rustedpy-maybe", specifier = ">=0.0.0" },
+]
 
 [package.metadata.requires-dev]
 dev = [
@@ -87,6 +93,15 @@ wheels = [
 ]
 
 [[package]]
+name = "result"
+version = "0.17.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a3/47/2175be65744aa4d8419c27bd3a7a7d65af5bcad7a4dc6a812c00778754f0/result-0.17.0.tar.gz", hash = "sha256:b73da420c0cb1a3bf741dbd41ff96dedafaad6a1b3ef437a9e33e380bb0d91cf", size = 20180, upload-time = "2024-06-02T16:39:54.51Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e2/90/19110ce9374c3db619e2df0816f2c58e4ddc5cdad5f7284cd81d8b30b7cb/result-0.17.0-py3-none-any.whl", hash = "sha256:49fd668b4951ad15800b8ccefd98b6b94effc789607e19c65064b775570933e8", size = 11689, upload-time = "2024-06-02T16:39:52.715Z" },
+]
+
+[[package]]
 name = "ruff"
 version = "0.14.1"
 source = { registry = "https://pypi.org/simple" }
@@ -110,6 +125,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c3/07/3c45562c67933cc35f6d5df4ca77dabbcd88fddaca0d6b8371693d29fd56/ruff-0.14.1-py3-none-win32.whl", hash = "sha256:e037ea374aaaff4103240ae79168c0945ae3d5ae8db190603de3b4012bd1def6", size = 12319467, upload-time = "2025-10-16T18:05:33.261Z" },
     { url = "https://files.pythonhosted.org/packages/02/88/0ee4ca507d4aa05f67e292d2e5eb0b3e358fbcfe527554a2eda9ac422d6b/ruff-0.14.1-py3-none-win_amd64.whl", hash = "sha256:59d599cdff9c7f925a017f6f2c256c908b094e55967f93f2821b1439928746a1", size = 13401123, upload-time = "2025-10-16T18:05:35.984Z" },
     { url = "https://files.pythonhosted.org/packages/b8/81/4b6387be7014858d924b843530e1b2a8e531846807516e9bea2ee0936bf7/ruff-0.14.1-py3-none-win_arm64.whl", hash = "sha256:e3b443c4c9f16ae850906b8d0a707b2a4c16f8d2f0a7fe65c475c5886665ce44", size = 12436636, upload-time = "2025-10-16T18:05:38.995Z" },
+]
+
+[[package]]
+name = "rustedpy-maybe"
+version = "0.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/87/be/64ecd947c8a6016073c8748a5a4a828b45bda5b8887ed7b057c0771f455d/rustedpy-maybe-0.0.0.tar.gz", hash = "sha256:7737f67186a74ea50db4e2511f1238560047b38a61c5e49b7f7e755b31a6aace", size = 7033, upload-time = "2023-12-05T02:25:27.125Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/80/d8/80df2f0a2532216550272b8f58b47554e244efe195869a3071b2f7c42094/rustedpy_maybe-0.0.0-py3-none-any.whl", hash = "sha256:0808636203133c69c1573f8b07c0375dd72b6ab1e5f32ef3ed42295ee63d93d3", size = 5442, upload-time = "2023-12-05T02:25:25.443Z" },
 ]
 
 [[package]]

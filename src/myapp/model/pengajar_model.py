@@ -81,6 +81,16 @@ class PengajarModel(QAbstractListModel):
         self._filtered.append(pengajar)
         self.filter(self._filter_query, self._filter_tipe)
 
+    def addPengajarToDatabase(self, pengajar: Pengajar) -> tuple[bool, str]:
+        """Method untuk menambahkan pengajar ke database."""
+        success, timeslot_id, message = self._db.timeslot_manager.add_timeslot(
+            timeslot.getHari(), timeslot.getMulai(), timeslot.getSelesai()
+        )
+        if success:
+            timeslot.setId(typing.cast(int, timeslot_id))
+
+        return success, message
+
     def fnAdd(self, id: str, nama: str, tipe: str, waktu: str) -> tuple[bool, str]:
         """Method untuk menambahkan pengajar baru ke model."""
         success = True

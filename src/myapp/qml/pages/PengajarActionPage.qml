@@ -37,6 +37,48 @@ Page {
         spacing: 8
         anchors.fill: parent
 
+        ButtonGroup {
+            id: tipePengajarGroup
+            // 'checkedButton' akan berisi RadioButton yang sedang aktif
+        }
+
+        RowLayout {
+            spacing: 15
+
+            Label {
+                text: qsTr("Tipe Pengajar :")
+                font.pixelSize: 14
+                font.bold: true
+            }
+
+            RowLayout {
+                spacing: 15
+                visible: root.isEdit
+
+                RadioButton {
+                    id: radioDosen
+                    text: qsTr("Dosen")
+                    checked: true
+                    ButtonGroup.group: tipePengajarGroup
+                    enabled: root.isEdit
+                }
+
+                RadioButton {
+                    id: radioAsdos
+                    text: qsTr("Asisten Dosen")
+                    ButtonGroup.group: tipePengajarGroup
+                    enabled: root.isEdit
+                }
+            }
+
+            Label {
+                visible: !root.isEdit
+                text: radioDosen.checked ? radioDosen.text : radioAsdos.text
+                font.pixelSize: 14
+                Layout.alignment: Qt.AlignVCenter
+            }
+        }
+
         TextField {
             id: textFieldId
             readOnly: !root.isEdit
@@ -66,48 +108,6 @@ Page {
             Material.containerStyle: Material.Outlined
             background.implicitHeight: root.textFieldSize.height
             background.implicitWidth: root.textFieldSize.width
-        }
-
-        ButtonGroup {
-            id: tipePengajarGroup
-            // 'checkedButton' akan berisi RadioButton yang sedang aktif
-        }
-
-        RowLayout {
-            spacing: 15
-
-            Label {
-                text: qsTr("Tipe Pengajar :")
-                font.pixelSize: 14
-                font.bold: true
-            }
-
-            RowLayout {
-                spacing: 15
-                visible: root.isEdit
-
-                RadioButton {
-                    id: radioDosen
-                    text: qsTr("Dosen")
-                    // checked: true
-                    ButtonGroup.group: tipePengajarGroup
-                    enabled: root.isEdit
-                }
-
-                RadioButton {
-                    id: radioAsdos
-                    text: qsTr("Asisten Dosen")
-                    ButtonGroup.group: tipePengajarGroup
-                    enabled: root.isEdit
-                }
-            }
-
-            Label {
-                visible: !root.isEdit
-                text: radioDosen.checked ? radioDosen.text : radioAsdos.text
-                font.pixelSize: 14
-                Layout.alignment: Qt.AlignVCenter
-            }
         }
 
         Label {
@@ -277,6 +277,7 @@ Page {
                 const old_id = root.pengajarId;
                 const idn = textFieldId.text.trim();
                 const nama = textFieldNama.text.trim();
+                // TODO: pastiken agar radio button dipilih sebelum melanjutkan proses
                 const tipe = radioDosen.checked ? "dosen" : radioAsdos.checked ? "asdos" : "unknown";
                 const waktu = root.getSelectedDays().join(",");
                 console.log("ID:", idn, "Nama:", nama, "Tipe:", tipe, "Waktu:", waktu);

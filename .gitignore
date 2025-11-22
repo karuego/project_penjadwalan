@@ -95,3 +95,4 @@ wheels/
 app.log
 database.sqlite3.db
 .task/
+app

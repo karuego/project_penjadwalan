@@ -5,8 +5,12 @@ build-backend = "hatchling.build"
 [project]
 name = "myapp"
 version = "0.1.0"
-requires-python = ">=3.13"
-dependencies = ["pyside6"]
+requires-python = ">=3.11"
+dependencies = [
+    "pyside6",
+    "result>=0.17.0",
+    "rustedpy-maybe>=0.0.0",
+]
 authors = [
   { name="Nama Anda", email="email@anda.com" },
 ]

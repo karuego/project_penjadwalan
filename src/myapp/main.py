@@ -39,7 +39,11 @@ def on_qml_warning(errors: list[QQmlError]) -> None:
 
 def run() -> None:
     app = QGuiApplication(sys.argv)
-    app.setWindowIcon(QIcon("src/myapp/assets/icon.png"))
+    # app.setWindowIcon(
+    #     QIcon(
+    #         "/home/kae/Studio/Git/karuego/project_penjadwalan/src/myapp/assets/icon2.png"
+    #     )
+    # )
     engine = QQmlApplicationEngine()
 
     # Kembalikan perilaku SIGINT default agar Ctrl+C mematikan proses
