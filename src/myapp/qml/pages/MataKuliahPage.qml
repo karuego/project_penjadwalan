@@ -5,8 +5,9 @@ import QtQuick.Layouts
 import QtQuick.Controls.Material
 
 import "../components"
-// qmllint disable import
-import Theme
+import "../helpers/Hari.js" as Hari
+import "../helpers/String.js" as String
+import Theme // qmllint disable import
 
 Page {
     id: root
@@ -18,143 +19,412 @@ Page {
     property CustomDialog alertDialogRef
 
     property var contextBridgeRef: contextBridge // qmllint disable unqualified
-    property var waktuModelRef: contextBridgeRef.waktuModel
-    property var waktuProxyRef: contextBridgeRef.pengajarProxy
+    property var pengajarModelRef: contextBridgeRef.pengajarModel
+    property var matakuliahModelRef: contextBridgeRef.matakuliahModel
 
     // property string reloadMessage: "Memuat ulang database"
-    // property var reloadFunc: () => waktuModelRef.reload()
+    // property var reloadFunc: () => pengajarModelRef.reload()
 
     ColumnLayout {
-        spacing: 10
+        id: mainContainer
         anchors.fill: parent
 
         Button {
-            id: tambahMataKuliah
+            id: tambahMatkul
             text: "Tambah Mata Kuliah"
-            onClicked: root.stackViewRef.push("MataKuliahActionPage.qml")
+            Material.foreground: Material.Pink
             implicitHeight: 55
             Layout.alignment: Qt.AlignHCenter
+            Layout.bottomMargin: 16
+
+            background: Rectangle {
+                radius: 8
+                color: tambahMatkul.down ? "#9c9c9c" : tambahMatkul.hovered ? "#cccaca" : "#e0e0e0"
+
+                // border.color: "#adadad"
+                // border.width: 1
+
+                Behavior on color {
+                    ColorAnimation {
+                        duration: 150
+                    }
+                }
+            }
+
+            onClicked: {
+                root.stackViewRef.push("MataKuliahActionPage.qml");
+            }
         }
 
+        // QSortFilterProxyModel {
+        //     id: fruitFilter
+        //     sourceModel: fruitModel
+        //     filterRegularExpression: RegExp(fruitSearch.text, "i")
+        //     filterRole: 0 // needs to be set explicitly
+        // }
+
+        RowLayout {
+            id: listTool
+            implicitHeight: 55
+            Layout.alignment: Qt.AlignVCenter
+            Layout.fillWidth: true
+            Layout.leftMargin: 16
+            Layout.rightMargin: 16
+            Layout.bottomMargin: 8
+
+            property string selectedType: "semua"
+
+            TextField {
+                id: searchField
+                placeholderText: "Cari mata kuliah..."
+                Layout.fillWidth: true
+                onTextChanged: root.contextBridgeRef.matakuliahModel.filter(text, listTool.selectedType)
+            }
+
+            Item {
+                Layout.preferredWidth: 16
+            }
+
+            Label {
+                text: "Filter :"
+                font.pixelSize: 15
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            // ButtonGroup {
+            //     id: filterGroup
+            //     buttons: opsiFilter.children
+
+            //     onClicked: {
+            //         const tipe = checkedButton.tipe; // qmllint disable
+
+            //         /*if (tipe === "semua") {
+            //             // Kirim string kosong untuk menghapus filter
+            //             // root.contextBridgeRef.filterPengajar("");
+            //             root.contextBridgeRef.pengajarProxy.filterPengajar("");
+            //         } else {
+            //             // root.contextBridgeRef.filterPengajar(tipe);
+            //             root.contextBridgeRef.pengajarProxy.filterPengajar(tipe);
+            //         }*/
+
+            //         listTool.selectedType = tipe;
+            //         root.contextBridgeRef.pengajarModel.filter(searchField.text, tipe);
+            //     }
+            // }
+
+            // RowLayout {
+            //     id: opsiFilter
+
+            //     RadioButton {
+            //         text: qsTr("Semua")
+            //         checked: true
+            //         property string tipe: "semua"
+            //     }
+
+            //     RadioButton {
+            //         text: qsTr("Dosen")
+            //         property string tipe: "dosen"
+            //     }
+
+            //     RadioButton {
+            //         text: qsTr("Asisten Dosen")
+            //         property string tipe: "asdos"
+            //     }
+            // }
+
+            ComboBox {
+                id: filterComboBox
+                popup.closePolicy: Popup.CloseOnEscape
+                popup.modal: false
+
+                model: ListModel {
+                    ListElement {
+                        text: qsTr("Semua")
+                        value: "semua"
+                    }
+                    ListElement {
+                        text: qsTr("Teori")
+                        value: "teori"
+                    }
+                    ListElement {
+                        text: qsTr("Praktikum")
+                        value: "praktek"
+                    }
+                }
+
+                textRole: "text"
+                valueRole: "value"
+                // currentIndex: 0
+                // displayText: "Tipe: " + currentText
+
+                // Saat item berubah, panggil function Python dari ContextBridge
+                onActivated: {
+                    // root.contextBridgeRef.filterPengajar("")
+                    root.contextBridgeRef.matakuliahModel.filter(searchField.text, currentValue);
+                }
+            }
+        }
+
+        // qmllint disable
+        SortFilterProxyModel {
+            id: proxy
+            model: root.matakuliahModelRef
+
+            sorters: [
+                // RoleSorter {
+                //     roleName: "tipe"
+                //     priority: 0
+                //     sortOrder: Qt.AscendingOrder
+                // },
+                RoleSorter {
+                    roleName: "nama"
+                    priority: 1
+                    sortOrder: Qt.AscendingOrder
+                }
+                // FunctionSorter {
+                //     id: sortTipe
+                //     function sort(lhsData: Pengajar, rhsData: Pengajar): int {
+                //         return (lhsData.tipe < rhsData.tipe) ? -1 : ((lhsData === rhsData.tipe) ? 0 : 1);
+                //     }
+                // }
+                // FunctionSorter {
+                //     id: sortNama
+                //     function sort(lhsData: Pengajar, rhsData: Pengajar): int {
+                //         return (lhsData.nama > rhsData.nama) ? -1 : ((lhsData !== rhsData.nama) ? 0 : 1);
+                //     }
+                // }
+
+
+            ]
+            // filters: [
+            //     FunctionFilter {
+            //         id: functionSorter
+            //         component TimeSlot: QtObject {
+            //             property int id_
+            //             property int hari
+            //             property string mulai
+            //             property string selesai
+            //         }
+            //         function filter(data: TimeSlot): bool {
+            //             //return data.hari == 2
+            //             return true;
+            //         }
+            //     }
+            // ]
+        }
+        // qmllint enable
+
         Rectangle {
+            id: rectangle
             Layout.fillWidth: true
             Layout.fillHeight: true
-
             border.color: "#cccccc"
             border.width: 1
             radius: 8
 
             ScrollView {
+                id: scrollView
                 anchors.fill: parent
                 anchors.margins: 4
 
                 ListView {
                     id: listView
+                    // model: root.contextBridgeRef.pengajarProxyModel
+                    // model: root.contextBridgeRef.pengajarModel
+                    model: proxy
                     spacing: 8
-                    anchors.fill: parent
-                    boundsBehavior: Flickable.StopAtBounds
                     clip: true
-
-                    model: root.waktuModelRef
+                    boundsBehavior: Flickable.StopAtBounds
 
                     delegate: ItemDelegate {
                         id: item
                         width: ListView.view.width
-                        // highlighted: ListView.isCurrentItem
+                        // padding: 16
+                        padding: 0
 
                         required property int index
                         required property int id_
-                        required property string hari
-                        required property string mulai
-                        required property string selesai
+                        required property string nama
+                        required property string tipe
+                        required property int semester
+                        required property int sks
+                        required property int kelas
+                        required property int sesi
 
-                        Label {
-                            id: hariLabel
-                            text: item.hari
-                            font.pixelSize: 18
-                            font.bold: true
-                        }
+                        ColumnLayout {
+                            width: parent.width
+                            spacing: 0
 
-                        Label {
-                            id: jamLabel
-                            text: item.mulai + " - " + item.selesai
-                            anchors.top: hariLabel.bottom
-                            anchors.topMargin: 2
-                            font.pixelSize: 13
-                            color: "#555"
-                        }
+                            RowLayout {
+                                // width: parent.width
 
-                        IconButton {
-                            iconName: "delete"
-                            iconColor: "red"
-                            // tooltipText: "Hapus"
-                            anchors.right: parent.right
-                            anchors.rightMargin: 16
+                                Layout.fillWidth: true
+                                // Layout.topMargin: 16
+                                Layout.leftMargin: 8
+                                // Layout.rightMargin: 16
 
-                            onClicked: {
-                                const message = `Apakah anda ingin menghapus waktu: \nHari: "${item.hari}".\nWaktu: ${item.mulai} - ${item.selesai}"`;
+                                // Kolom untuk teks
+                                ColumnLayout {
+                                    // Layout.leftMargin: 8
 
-                                // qmllint disable unqualified
-                                root.confirmDialogRef.openWithCallback(qsTr("Konfirmasi penghapusan waktu"), message, function () {
-                                    root.waktuModel.removeWaktu(index);
-                                }, () => {});
-                                // qmllint enable unqualified
+                                    RowLayout {
+                                        spacing: 8
+
+                                        Label {
+                                            id: nameLabel
+                                            text: item.nama
+                                            font.pixelSize: 18
+                                            font.bold: true
+                                        }
+
+                                        Label {
+                                            text: String.capitalizeFirstLetter(item.tipe)
+                                            font.pixelSize: 11
+                                            color: "#555"
+                                            Layout.alignment: Qt.AlignTop
+                                        }
+                                    }
+
+                                    RowLayout {
+                                        Text {
+                                            text: qsTr("SKS :")
+                                            font.pixelSize: 13
+                                        }
+
+                                        Text {
+                                            text: item.sks
+                                            font.pixelSize: 13
+                                            color: "#555"
+                                        }
+
+                                        Text {
+                                            text: " | "
+                                            font.pixelSize: 13
+                                            // visible: item.waktu != ""
+                                        }
+
+                                        Text {
+                                            text: "Semester : "
+                                            font.pixelSize: 13
+                                            // visible: item.waktu != ""
+                                        }
+
+                                        Label {
+                                            text: item.semester
+                                            font.pixelSize: 13
+                                            color: "#555"
+                                        }
+
+                                        Text {
+                                            text: " | "
+                                            font.pixelSize: 13
+                                            // visible: item.waktu != ""
+                                        }
+
+                                        Text {
+                                            text: "Pengampu : "
+                                            font.pixelSize: 13
+                                            // visible: item.waktu != ""
+                                        }
+
+                                        Label {
+                                            text: item.pengampu_id
+                                            font.pixelSize: 13
+                                            color: "#555"
+                                        }
+                                    }
+                                }
+
+                                // Spacer untuk mendorong tombol ke kanan
+                                Item {
+                                    Layout.fillWidth: true
+                                }
+
+                                // Baris untuk tombol aksi
+                                RowLayout {
+                                    id: actionButton
+                                    Layout.alignment: Qt.AlignRight
+                                    Layout.rightMargin: 25
+
+                                    IconButton {
+                                        iconName: "visibility"
+                                        iconColor: "#78A75A"
+                                        // tooltipText: "Edit"
+
+                                        onClicked: {
+                                            root.gotoActionPage("view", item.id_); // qmllint disable unqualified
+                                        }
+                                    }
+
+                                    IconButton {
+                                        iconName: "edit"
+                                        iconColor: "orange"
+                                        // tooltipText: "Edit"
+
+                                        onClicked: root.gotoActionPage("edit", item.id_) // qmllint disable unqualified
+                                    }
+
+                                    IconButton {
+                                        iconName: "delete"
+                                        iconColor: "red"
+                                        // tooltipText: "Hapus"
+
+                                        onClicked: {
+                                            const message = `Apakah anda ingin menghapus pengajar: \nNama: ${item.nama}\nDeskripsi: ${item.tipe}`;
+
+                                            root.confirmDialogRef.openWithCallback // qmllint disable unqualified
+                                            (qsTr("Konfirmasi penghapusan pengajar"), message, () => {
+                                                // root.contextBridgeRef.removePengajarFromIndex(item.index);
+                                                const result = root.pengajarModelRef.removeById(item.id_);
+                                                if (!result.success) {
+                                                    console.error("Failed to delete pengajar");
+                                                }
+                                            }, null);
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Garis pemisah
+                            Rectangle {
+                                id: separator
+
+                                Layout.topMargin: 4
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 1
+                                color: "#e0e0e0"
+                                // visible: item.index < (listView.count - 1) // qmllint disable unqualified
                             }
                         }
 
-                        // ScrollIndicator.vertical: ScrollIndicator { }
+                        // // Aksi saat item di-klik
+                        // onClicked: {
+                        //     console.log("Anda menekan item:", item.productName);
+                        // }
                     }
                 }
             }
         }
     }
 
-    ListModel {
-        id: productModel
+    function gotoActionPage(action, idn) {
+        root.stackViewRef.push("PengajarActionPage.qml", {
+            action: action,
+            pengajarId: idn
+        });
+    }
 
-        ListElement {
-            productName: "Mata Kuliah 1"
-            productDescription: "Dosen 1"
-        }
-        ListElement {
-            productName: "Mata Kuliah 2"
-            productDescription: "Dosen 2"
-        }
-        ListElement {
-            productName: "Mata Kuliah 3"
-            productDescription: "Dosen 3"
-        }
-        ListElement {
-            productName: "Mata Kuliah 4"
-            productDescription: "Dosen 4"
-        }
-        ListElement {
-            productName: "Mata Kuliah 5"
-            productDescription: "Dosen 5"
-        }
-        ListElement {
-            productName: "Mata Kuliah 6"
-            productDescription: "Dosen 6"
-        }
-        ListElement {
-            productName: "Mata Kuliah 7"
-            productDescription: "Dosen 7"
-        }
-        ListElement {
-            productName: "Mata Kuliah 8"
-            productDescription: "Dosen 8"
-        }
-        ListElement {
-            productName: "Mata Kuliah 9"
-            productDescription: "Dosen 9"
-        }
-        ListElement {
-            productName: "Mata Kuliah 10"
-            productDescription: "Dosen 10"
-        }
-        ListElement {
-            productName: "Mata Kuliah 11"
-            productDescription: "Dosen 11"
-        }
+    component TimeSlot: QtObject {
+        property string id_
+        property string nama
+        property string tipe
+        property string waktu
+    }
+
+    component Pengajar: QtObject {
+        property string id_
+        property string nama
+        property string tipe
+        property string waktu
     }
 }

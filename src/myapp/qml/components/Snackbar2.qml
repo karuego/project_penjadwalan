@@ -1,9 +1,11 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Controls
+import QtQuick.Controls.Material
 
 Popup {
     id: control
+    Material.theme: Material.Light
 
     // Properti kustom untuk pesan dan teks tombol
     property string text: ""

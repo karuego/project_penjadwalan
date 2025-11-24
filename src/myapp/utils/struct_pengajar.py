@@ -69,6 +69,17 @@ class Pengajar(QObject):
             return False
         return True
 
+    def getAll(self) -> tuple[str, str, str, str]:
+        return (self._id, self._nama, self._tipe, self._waktu)
+
+    def asDict(self) -> dict[str, str]:
+        return {
+            'id': self._id,
+            'nama': self._nama,
+            'tipe': self._tipe,
+            'waktu': self._waktu
+        }
+
     @Property(str)
     def id(self) -> str:
         return self._id

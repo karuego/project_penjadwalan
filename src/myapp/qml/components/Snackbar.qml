@@ -87,4 +87,28 @@ Popup {
         root.open();
         closeTimer.start();
     }
+
+    // Fungsi untuk menampilkan snackbar
+    function showLong(message, closeActionFunc) {
+        root.text = message;
+        root.duration = 5000; // Durasi lebih lama
+
+        if (closeActionFunc)
+            root.closeActionFunc = closeActionFunc;
+
+        root.open();
+        closeTimer.start();
+    }
+
+    // Fungsi untuk menampilkan snackbar
+    function showDuration(duration, message, closeActionFunc) {
+        root.text = message;
+        root.duration = duration; // Atur durasi sesuai parameter
+
+        if (closeActionFunc)
+            root.closeActionFunc = closeActionFunc;
+
+        root.open();
+        closeTimer.start();
+    }
 }

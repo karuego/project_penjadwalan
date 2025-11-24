@@ -87,7 +87,7 @@ Page {
 
             TextField {
                 id: searchField
-                placeholderText: "Cari pengajar (bisa regex)..."
+                placeholderText: "Cari pengajar..."
                 Layout.fillWidth: true
                 // onTextChanged: root.contextBridgeRef.pengajarProxy.setFilterText(text)
                 onTextChanged: root.contextBridgeRef.pengajarModel.filter(text, listTool.selectedType)

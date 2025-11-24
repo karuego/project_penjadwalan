@@ -15,7 +15,7 @@ Table timeslots {
 }
 
 Table pengajar {
-  id text [pk, increment]
+  id text [pk, not null]
   nama text [not null]
   jenis text [not null, default: 'dosen', note: 'dosen / asdos']
   preferensi_waktu text [note: 'comma-separated array of integers representing non-preferred days (1-7)']

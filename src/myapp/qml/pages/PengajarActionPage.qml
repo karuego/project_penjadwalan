@@ -15,6 +15,7 @@ Page {
     property StackView stackViewRef
     property CustomDialog confirmDialogRef
     property CustomDialog alertDialogRef
+    property Snackbar snackbarRef
 
     readonly property size textFieldSize: Qt.size(250, 50)
     readonly property size buttonSize: Qt.size(120, 50)
@@ -260,7 +261,7 @@ Page {
 
         Button {
             id: btnFinale
-            text: qsTr("Simpan")
+            text: root.action == 'edit' ? qsTr("Perbarui") : qsTr("Simpan")
             Material.background: Material.Blue
             Layout.alignment: Qt.AlignRight
             implicitWidth: root.buttonSize.width * 1.5
@@ -277,10 +278,8 @@ Page {
                 const old_id = root.pengajarId;
                 const idn = textFieldId.text.trim();
                 const nama = textFieldNama.text.trim();
-                // TODO: pastiken agar radio button dipilih sebelum melanjutkan proses
                 const tipe = radioDosen.checked ? "dosen" : radioAsdos.checked ? "asdos" : "unknown";
                 const waktu = root.getSelectedDays().join(",");
-                console.log("ID:", idn, "Nama:", nama, "Tipe:", tipe, "Waktu:", waktu);
 
                 let result = null;
                 if (root.action === "edit") {
@@ -289,7 +288,12 @@ Page {
                     result = root.pengajarModelRef.add(idn, nama, tipe, waktu);
                 }
 
-                root.stackViewRef.pop();
+                if (result.success) {
+                    root.snackbarRef.showLong("Data pengajar berhasil disimpan.", ()=>{});
+                    root.stackViewRef.pop();
+                } else {
+                    root.snackbarRef.showLong(`Gagal menyimpan data pengajar: ${result.message}`, ()=>{});
+                }
             }
         }
 

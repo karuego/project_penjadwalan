@@ -4,11 +4,21 @@ import QtQuick.Window
 import QtQuick.Layouts
 import QtQuick.Controls.Material
 
+import "../components"
+import Theme // qmllint disable import
+
 Page {
     id: root
     title: "Tambah Mata Kuliah"
 
     property StackView stackViewRef
+    property CustomDialog confirmDialogRef
+    property CustomDialog alertDialogRef
+    property Snackbar snackbarRef
+
+    property var contextBridgeRef: contextBridge // qmllint disable unqualified
+    property var pengajarModelRef: contextBridgeRef.pengajarModel
+    property var matakuliahModelRef: contextBridgeRef.matakuliahModel
 
     ColumnLayout {
         spacing: 10
@@ -17,7 +27,7 @@ Page {
         TextField {
             id: textFieldNama
             placeholderText: qsTr("Mata Kuliah")
-            Accessible.name: qsTr("Input Nama Pengajar")
+            Accessible.name: qsTr("Input Nama Mata Kuliah")
             // Material.containerStyle: Material.Filled
             Material.containerStyle: Material.Outlined
             background.implicitHeight: 50
@@ -26,7 +36,9 @@ Page {
 
         ButtonGroup {
             id: tipePerkuliahan
-            // 'checkedButton' akan berisi RadioButton yang sedang aktif
+            onClicked: {
+
+            }
         }
 
         RowLayout {
@@ -36,20 +48,31 @@ Page {
                 id: radioTeori
                 text: qsTr("Teori")
                 ButtonGroup.group: tipePerkuliahan
+                checked: true
+                onCheckedChanged: {
+                    textFieldSks.text = "2"
+                }
             }
 
             RadioButton {
                 id: radioPraktek
-                text: qsTr("Praktikum")
+                text: qsTr("Teori + Praktikum")
                 ButtonGroup.group: tipePerkuliahan
+                onCheckedChanged: {
+                    textFieldSks.text = "3"
+                }
             }
         }
 
         TextField {
             id: textFieldSks
+            text: "2"
             placeholderText: qsTr("Jumlah SKS")
             background.implicitHeight: 50
             background.implicitWidth: 250
+            validator: RegularExpressionValidator {
+                regularExpression: /^[0-9]*$/
+            }
         }
 
         TextField {
@@ -57,137 +80,142 @@ Page {
             placeholderText: qsTr("Semester")
             background.implicitHeight: 50
             background.implicitWidth: 250
-        }
-
-        TextField {
-            id: textFieldPengampu
-            placeholderText: qsTr("Pengampu")
-            background.implicitHeight: 50
-            background.implicitWidth: 250
+            validator: RegularExpressionValidator {
+                regularExpression: /^[0-9]*$/
+            }
         }
 
         TextField {
             id: textFieldJumlahKelas
-            placeholderText: qsTr("Jumlah Kelas")
+            placeholderText: qsTr("Jumlah Kelas yang Memprogram")
             background.implicitHeight: 50
             background.implicitWidth: 250
+            validator: RegularExpressionValidator {
+                regularExpression: /^[0-9]*$/
+            }
+        }
+
+        TextField {
+            id: textFieldJumlahSesi
+            visible: false
+            placeholderText: qsTr("Jumlah Sesi Praktikum")
+            background.implicitHeight: 50
+            background.implicitWidth: 250
+            validator: RegularExpressionValidator {
+                regularExpression: /^[0-9]*$/
+            }
+        }
+
+        // qmllint disable
+        SortFilterProxyModel {
+            id: proxyFilterDosen
+            model: root.pengajarModelRef
+
+            sorters: [
+                RoleSorter {
+                    roleName: "nama"
+                    sortOrder: Qt.AscendingOrder
+                }
+            ]
+            filters: [
+                ValueFilter {
+                    roleName: "tipe"
+                    value: "dosen"
+                }
+            ]
+        }
+        // qmllint enable
+
+        // qmllint disable
+        SortFilterProxyModel {
+            id: proxyFilterAsdos
+            model: root.pengajarModelRef
+
+            sorters: [
+                RoleSorter {
+                    roleName: "nama"
+                    sortOrder: Qt.AscendingOrder
+                }
+            ]
+            filters: [
+                ValueFilter {
+                    roleName: "tipe"
+                    value: "asdos"
+                }
+            ]
+        }
+        // qmllint enable
+
+        RowLayout {
+            Label {
+                text: qsTr("Dosen Pengampu :")
+            }
+
+            ComboBox {
+                id: comboBoxDosen
+                Layout.preferredWidth: 300
+                editable: true
+                model: proxyFilterDosen
+                textRole: "nama"
+                valueRole: "id_"
+                onAccepted: {
+                    if (find(editText) === -1)
+                        model.append({text: editText})
+                }
+            }
+        }
+
+        RowLayout {
+            visible: radioPraktek.checked
+
+            Label {
+                text: qsTr("Asisten Dosen :      ")
+            }
+
+            ComboBox {
+                id: comboBoxAsdos
+                Layout.preferredWidth: 300
+                editable: true
+                model: proxyFilterAsdos
+                textRole: "nama"
+                valueRole: "id_"
+                onAccepted: {
+                    if (find(editText) === -1)
+                        model.append({text: editText})
+                }
+            }
         }
 
         Button {
-            text: qsTr("Button")
+            text: qsTr("Simpan")
             hoverEnabled: true
             ToolTip.delay: 300
             ToolTip.timeout: 5000
             ToolTip.visible: hovered
             ToolTip.text: qsTr("This tool tip is shown after hovering the button for a second.")
-        }
 
-        Button {
-            text: "Open"
-            onClicked: popup.open()
-            highlighted: true
-            Material.accent: Material.Orange
-            // Material.background: Material.Teal
+            onClicked: {
+                const nama = textFieldNama.text.trim();
+                const tipe = radioTeori.checked ? "teori" : radioPraktek.checked ? "praktek" : "unknown";
+                const sks = textFieldSks.text
+                const semester = textFieldSemester.text
+                const kelas = textFieldJumlahKelas
+                const sesi = textFieldJumlahSesi
+                const dosenId = comboBoxDosen.currentValue
+                const asdosId = comboBoxAsdos.currentValue
 
-            // Material.roundedScale: Material.NotRounded
-            // Material.roundedScale: Material.ExtraSmallScale
-            // Material.roundedScale: Material.SmallScale
-            Material.roundedScale: Material.MediumScale
-            // Material.roundedScale: Material.LargeScale
-            // Material.roundedScale: Material.ExtraLargeScale
-            // Material.roundedScale: Material.FullScale
-        }
+                let result = null;
+                if (root.action === "edit") {
+                    result = root.pengajarModelRef.update(old_id, idn, nama, tipe, waktu);
+                } else {
+                    result = root.pengajarModelRef.add(idn, nama, tipe, waktu);
+                }
 
-        Popup {
-            id: popup
-            // x: 100; y: 100
-            Layout.leftMargin: 100
-            Layout.topMargin: 100
-            implicitWidth: 200
-            implicitHeight: 300
-            modal: true
-            focus: true
-            closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
-
-            padding: 10
-
-            contentItem: Text {
-                text: "Content"
-            }
-
-            /*ColumnLayout {
-                anchors.fill: parent
-                CheckBox { text: qsTr("E-mail") }
-                CheckBox { text: qsTr("Calendar") }
-                CheckBox { text: qsTr("Contacts") }
-            }*/
-
-            /*parent: Overlay.overlay
-
-            x: Math.round((parent.width - width) / 2)
-            y: Math.round((parent.height - height) / 2)
-            width: 100
-            height: 100*/
-
-            // visible: true
-            //     anchors.centerIn: parent
-            //     margins: 10
-            //     closePolicy: Popup.CloseOnEscape
-            //     ColumnLayout {
-            //         TextField {
-            //             placeholderText: qsTr("Username")
-            //         }
-            //         TextField {
-            //             placeholderText: qsTr("Password")
-            //             echoMode: TextInput.Password
-            //         }
-            //     }
-        }
-
-        /*RowLayout {
-             Text {
-                text: "Which basket?"
-            }
-            TextInput {
-                focus: true
-                validator: RegularExpressionValidator { regularExpression: /fruit basket/ }
-                // validator: IntValidator { bottom:0; top: 2000}
-            }
-        }*/
-
-        // TextField standar sebagai perbandingan
-        TextField {
-            placeholderText: "TextField Standar"
-        }
-
-        // TextField kustom dengan efek fokus yang lebih mencolok
-        TextField {
-            id: customField
-            placeholderText: "Fokus Lebih Mencolok"
-
-            // Ganti background default
-            background: Rectangle {
-                // Gunakan warna transparan untuk latar belakang
-                color: "transparent"
-
-                // Garis bawah yang akan kita modifikasi
-                Rectangle {
-                    width: parent.width
-                    height: customField.activeFocus ? 2 : 1 // Garis lebih tebal saat fokus
-                    color: customField.activeFocus ? Material.accent : "#888" // Warna aksen saat fokus
-                    anchors.bottom: parent.bottom
-
-                    // Animasi halus untuk perubahan warna dan tinggi
-                    Behavior on color {
-                        ColorAnimation {
-                            duration: 200
-                        }
-                    }
-                    Behavior on height {
-                        NumberAnimation {
-                            duration: 200
-                        }
-                    }
+                if (result.success) {
+                    root.snackbarRef.showLong("Data pengajar berhasil disimpan.", ()=>{});
+                    root.stackViewRef.pop();
+                } else {
+                    root.snackbarRef.showLong(`Gagal menyimpan data pengajar: ${result.message}`, ()=>{});
                 }
             }
         }

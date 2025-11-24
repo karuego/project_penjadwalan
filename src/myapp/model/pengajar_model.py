@@ -1,17 +1,21 @@
 import re
+from result.result import Result
+import sqlite3
 import typing
+from result import Result, Ok, Err, is_ok, is_err
+from maybe import Maybe, Some, Nothing
+
 from PySide6.QtCore import (
+    QAbstractListModel,
+    QByteArray,
+    QModelIndex,
+    QObject,
+    QPersistentModelIndex,
     Qt,
     Slot,
-    QByteArray,
-    QObject,
-    QAbstractListModel,
-    QModelIndex,
-    QPersistentModelIndex,
 )
-
-from utils import Database  # pyright: ignore[reportImplicitRelativeImport]
-from utils import Pengajar  # pyright: ignore[reportImplicitRelativeImport]
+from utils.database import Database # pyright: ignore[reportImplicitRelativeImport]
+from utils.struct_pengajar import Pengajar # pyright: ignore[reportImplicitRelativeImport]
 
 
 class PengajarModel(QAbstractListModel):
@@ -20,8 +24,8 @@ class PengajarModel(QAbstractListModel):
     TIPE_ROLE: int = int(Qt.ItemDataRole.UserRole) + 3
     WAKTU_ROLE: int = int(Qt.ItemDataRole.UserRole) + 4
 
-    _filter_query: str = ""
-    _filter_tipe: str = "semua"
+    _filter_query: str = ""     # pyright: ignore[reportRedeclaration]
+    _filter_tipe: str = "semua" # pyright: ignore[reportRedeclaration]
 
     def __init__(self, db: Database, parent: QObject | None = None):
         super().__init__(parent)
@@ -79,30 +83,66 @@ class PengajarModel(QAbstractListModel):
         """Method untuk menambahkan pengajar ke database."""
         self._all_data.append(pengajar)
         self._filtered.append(pengajar)
-        self.filter(self._filter_query, self._filter_tipe)
+        self.fnFilter(self._filter_query, self._filter_tipe)
 
     def addPengajarToDatabase(self, pengajar: Pengajar) -> tuple[bool, str]:
-        """Method untuk menambahkan pengajar ke database."""
-        success, timeslot_id, message = self._db.timeslot_manager.add_timeslot(
-            timeslot.getHari(), timeslot.getMulai(), timeslot.getSelesai()
-        )
-        if success:
-            timeslot.setId(typing.cast(int, timeslot_id))
+        """
+        Menambahkan pengajar baru ke database dengan validasi
+        Returns: (success, message)
+        """
+        try:
+            # Validasi input
+            if not all([pengajar.getId(), pengajar.getNama(), pengajar.getTipe()]):
+                return False, "Field id, nama, dan jenis harus diisi"
 
-        return success, message
+            # Cek if already exists
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+
+                query = "SELECT jenis FROM pengajar WHERE id = ?"
+                params: list[str] = [pengajar.getId()]
+                idn: str = "NIDN" if pengajar.getTipe().lower() == "dosen" else "NIM"
+
+                _ = cursor.execute(query, params)
+                data_lama: str | None = cursor.fetchone() # pyright: ignore[reportAny]
+
+                if data_lama is None:
+                    _ = cursor.execute(
+                        """
+                            INSERT INTO pengajar (id, nama, jenis, preferensi_waktu)
+                            VALUES (?, ?, ?, ?)
+                        """,
+                        (pengajar.getId(), pengajar.getNama(), pengajar.getTipe(), pengajar.getWaktu()),
+                    )
+                    conn.commit()
+                    return True, "Pengajar berhasil ditambahkan"
+                else:
+                    return False, f"Pengajar dengan {idn} {pengajar.getId()} sudah ada"
+        except sqlite3.Error as e:
+            return False, f"Database error: {str(e)}"
+        except Exception as e:
+            return False, f"Error: {str(e)}"
 
     def fnAdd(self, id: str, nama: str, tipe: str, waktu: str) -> tuple[bool, str]:
         """Method untuk menambahkan pengajar baru ke model."""
         success = True
         message = "Berhasil"
 
-        self.addPengajarToList(
-            Pengajar(id.strip(), nama.strip(), tipe.strip(), waktu.strip())
+        pengajar = Pengajar(
+            id.strip(),
+            nama.strip(),
+            tipe.strip(),
+            waktu.strip()
         )
 
+        success, message = self.addPengajarToDatabase(pengajar)
+        if not success:
+            return success, message
+
+        self.addPengajarToList(pengajar)
         return success, message
 
-    @Slot(str, str, str, str, result="QVariant")  # pyright: ignore[reportAny]
+    @Slot(str, str, str, str, result="QVariant")  # pyright: ignore[reportAny, reportArgumentType]
     def add(self, id: str, nama: str, tipe: str, waktu: str) -> dict[str, bool | str]:
         success, message = self.fnAdd(id, nama, tipe, waktu)
         return {"success": success, "message": message}
@@ -111,37 +151,50 @@ class PengajarModel(QAbstractListModel):
         self, old_id: str, new_id: str, nama: str, tipe: str, waktu: str
     ) -> tuple[bool, str]:
         """Method untuk mengubah data pengajar yang ada di model."""
-        success = False
-        message = "Gagal"
+        success: bool = False
+        message: str = "Gagal memperbarui data pengajar"
 
         # filtered_data: list[Pengajar] = []
-        for pengajar in self._all_data:
-            if pengajar.getId() == old_id:
-                if pengajar.getId() != new_id:
-                    pengajar.setId(new_id)
-                pengajar.setNama(nama)
-                pengajar.setTipe(tipe)
-                pengajar.setWaktu(waktu)
+        for index, pengajar in enumerate[Pengajar](self._all_data):
+            if pengajar.getId() != old_id:
+                continue
 
-                success = True
-                message = "Berhasil"
+            res: Result[str, str] = self.DB_update_pengajar(old_id, Pengajar(new_id, nama, tipe, waktu))
+            if is_err(res):
+                return False, res.unwrap_err()
 
-                break
+            success = True
+            message = res.unwrap()
 
-        self.filter(self._filter_query, self._filter_tipe)
+            if pengajar.getId() != new_id:
+                pengajar.setId(new_id)
+
+            pengajar.setNama(nama)
+            _ = pengajar.setTipe(tipe)
+            pengajar.setWaktu(waktu)
+
+            # Beri tahu QML View bahwa data pada index tersebut telah berubah untuk role tertentu
+            roles_to_notify: list[int] = [PengajarModel.ID_ROLE, PengajarModel.NAMA_ROLE, PengajarModel.TIPE_ROLE, PengajarModel.WAKTU_ROLE]
+            model_index: QModelIndex = self.index(index, 0)
+            self.dataChanged.emit(model_index, model_index, roles_to_notify)
+
+            break
+
+        self.fnFilter(self._filter_query, self._filter_tipe)
         return success, message
 
-    @Slot(str, str, str, str, str, result="QVariant")  # pyright: ignore[reportAny]
+    @Slot(str, str, str, str, str, result="QVariant")  # pyright: ignore[reportAny, reportArgumentType]
     def update(
         self, old_id: str, new_id: str, nama: str, tipe: str, waktu: str
     ) -> dict[str, bool | str]:
+        """Memperbarui item berdasarkan ID dan memancarkan sinyal dataChanged."""
         success, message = self.fnUpdate(old_id, new_id, nama, tipe, waktu)
         return {"success": success, "message": message}
 
     def getIndexById(self, id: str) -> int:
         # for i, item in enumerate(self._all_data):
         for i, item in enumerate(self._filtered):
-            if int(item.getId()) == int(id):
+            if item.getId() == id:
                 return i
 
         return -1
@@ -198,22 +251,28 @@ class PengajarModel(QAbstractListModel):
     def removeByIndex(self, index: int) -> None:
         self.fnRemoveByIndex(index)
 
-    def fnRemoveById(self, id: str):
+    def fnRemoveById(self, id: str) -> dict[str, bool | str]:
         """Method untuk menghapus pengajar berdasarkan id key."""
         index: int = self.getIndexById(id)
+
         self.beginRemoveRows(QModelIndex(), index, index)
+        res: Result[str, str] = self.DB_delete_pengajar(id)
+        if is_err(res):
+            self.endRemoveRows()
+            return {"success": False, "message": res.unwrap_err()}
+
+
         del self._all_data[index]
         del self._filtered[index]
         self.endRemoveRows()
 
-        return {"success": True, "message": "Pengajar berhasil dihapus"}
+        return {"success": True, "message": res.unwrap()}
 
-    @Slot(str, result="QVariant")  # pyright: ignore[reportAny]
+    @Slot(str, result="QVariant")  # pyright: ignore[reportAny, reportArgumentType]
     def removeById(self, id: str) -> dict[str, bool | str]:
         return self.fnRemoveById(id)
 
-    @Slot(str, str)  # pyright: ignore[reportAny]
-    def filter(self, query: str, tipe: str) -> None:
+    def fnFilter(self, query: str, tipe: str) -> None:
         """
         Filter data berdasarkan nama dan tipe.
         """
@@ -258,7 +317,11 @@ class PengajarModel(QAbstractListModel):
 
         self.endResetModel()
 
-    # @Slot(str, str, str, str, str)  # pyright: ignore[reportAny]
+    @Slot(str, str)  # pyright: ignore[reportAny]
+    def filter(self, query: str, tipe: str) -> None:
+        self.fnFilter(query, tipe)
+
+    # @Slot(str, str, str, str, str)
     # def update(
     #     self,
     #     prev_id: str | None = None,
@@ -287,3 +350,125 @@ class PengajarModel(QAbstractListModel):
 
     #             self.dataChanged.emit(self.index(i), self.index(i))
     #             break
+
+    def loadDatabase(self) -> None:
+        semua_pengajar: list[Pengajar] = self.DB_get_all_pengajar()
+        for pengajar in semua_pengajar:
+            self.addPengajarToList(pengajar)
+
+    def DB_get_all_pengajar(self) -> list[Pengajar]:
+        """Mendapatkan semua pengajar"""
+        with self.db.get_connection() as conn:
+            cursor = conn.cursor()
+
+            _ = cursor.execute("SELECT * FROM pengajar ORDER BY nama")
+            res: list[tuple[str, str, str, str]] | None = cursor.fetchall()
+            if not res:
+                return []
+
+            pengajar: list[Pengajar] = []
+            for item in res:
+                pengajar.append(
+                    Pengajar(id=item[0], nama=item[1], tipe=item[2], waktu=item[3])
+                )
+            return pengajar
+
+    def DB_get_pengajar_by_id(self, id: str) -> Result[Pengajar, str]:
+        """Mendapatkan pengajar berdasarkan ID"""
+        with self.db.get_connection() as conn:
+            cursor: sqlite3.Cursor = conn.cursor()
+            _ = cursor.execute(
+                """
+                    SELECT id, nama, jenis, preferensi_waktu
+                    FROM pengajar
+                    WHERE id = ?
+                """,
+                (id,),
+            )
+
+            res: tuple[str, str, str, str] | None = cursor.fetchone() # pyright: ignore[reportAny]
+            if not res:
+                return Err("Pengajar tidak ditemukan")
+
+            return Ok(Pengajar(id=res[0], nama=res[1], tipe=res[2], waktu=res[3]))
+
+    def DB_delete_pengajar(self, id: str) -> Result[str, str]:
+        """Menghapus data pengajar"""
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+
+                _ = cursor.execute(
+                    "SELECT id, nama FROM pengajar WHERE id = ?",
+                    (id,),
+                )
+
+                res: tuple[str, str] | None = cursor.fetchone()  # pyright: ignore[reportAny]
+
+                if not res:
+                    return Err("Pengajar tidak ditemukan")
+
+                _ = cursor.execute("DELETE FROM pengajar WHERE id = ?", (id,))
+
+                conn.commit()
+
+            return Ok("Pengajar berhasil dihapus")
+
+        except sqlite3.Error as e:
+            return Err(f"Database error: {str(e)}")
+        except Exception as e:
+            return Err(f"Error: {str(e)}")
+
+    def DB_update_pengajar(self, id: str, pengajar: Pengajar) -> Result[str, str]:
+        """memperbarui data pengajar"""
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+
+                _ = cursor.execute(
+                    "SELECT id, nama FROM pengajar WHERE id = ?",
+                    (id,),
+                )
+
+                res: tuple[str, str] | None = cursor.fetchone()  # pyright: ignore[reportAny]
+
+                if not res:
+                    return Err("Pengajar tidak ditemukan")
+
+                _ = cursor.execute(
+                    """
+                        UPDATE pengajar
+                        SET id = ?, nama = ?, jenis = ?, preferensi_waktu = ?
+                        WHERE id = ?
+                    """,
+                    (
+                        pengajar.getId(),
+                        pengajar.getNama(),
+                        pengajar.getTipe(),
+                        pengajar.getWaktu(),
+                        id,
+                    )
+                )
+
+                conn.commit()
+
+            return Ok("Pengajar berhasil diperbarui")
+
+        except sqlite3.Error as e:
+            return Err(f"Database error: {str(e)}")
+        except Exception as e:
+            return Err(f"Error: {str(e)}")
+
+    def DB_clear_all_pengajar(self) -> Result[str, str]:
+        """Menghapus semua pengajar"""
+        try:
+            with self.db.get_connection() as conn:
+                cursor: sqlite3.Cursor = conn.cursor()
+                _ = cursor.execute("DELETE FROM pengajar")
+                conn.commit()
+
+            return Ok("Semua timeslots berhasil dihapus")
+        except sqlite3.Error as e:
+            return Err(f"Database error: {str(e)}")
+        except Exception as e:
+            return Err(f"Error: {str(e)}")

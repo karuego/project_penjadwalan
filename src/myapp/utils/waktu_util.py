@@ -1,14 +1,14 @@
 import typing
 import sqlite3
 from datetime import datetime
-from .database_manager import DatabaseManager
+from .database import Database
 from .hari import Hari
 from .struct_waktu import TimeSlot
 
 
 class TimeSlotManager:
-    def __init__(self, db_manager: DatabaseManager):
-        self.db_manager: DatabaseManager = db_manager
+    def __init__(self, db: Database):
+        self.db: Database = db
         self.validator: TimeSlotValidator = TimeSlotValidator()
 
     def check_overlap_in_db(
@@ -26,11 +26,11 @@ class TimeSlotManager:
         ):
             raise ValueError("Format waktu tidak valid")
 
-        with self.db_manager.get_connection() as conn:
+        with self.db.get_connection() as conn:
             cursor = conn.cursor()
 
             query = """
-                SELECT start_time, end_time FROM timeslots
+                SELECT mulai, selesai FROM timeslots
                 WHERE hari = ? AND id != ?
             """
             params = [hari, exclude_id or -1]
@@ -76,31 +76,18 @@ class TimeSlotManager:
                 )
 
             # Insert ke database
-            with self.db_manager.get_connection() as conn:
+            with self.db.get_connection() as conn:
                 cursor: sqlite3.Cursor = conn.cursor()
 
                 _ = cursor.execute(
                     """
-                    INSERT INTO timeslots (hari, start_time, end_time)
+                    INSERT INTO timeslots (hari, mulai, selesai)
                     VALUES (?, ?, ?)
                 """,
                     (hari, start_time, end_time),
                 )
 
                 timeslot_id = cursor.lastrowid
-
-                # Log audit
-                _ = cursor.execute(
-                    """
-                    INSERT INTO audit_log (action, timeslot_id, details)
-                    VALUES (?, ?, ?)
-                """,
-                    (
-                        "CREATE",
-                        timeslot_id,
-                        f"Added timeslot {Hari.getNama(hari)} {start_time}-{end_time}",
-                    ),
-                )
 
                 conn.commit()
 
@@ -113,24 +100,24 @@ class TimeSlotManager:
 
     def get_all_timeslots(self, hari: int | None = None) -> list[TimeSlot]:
         """Mendapatkan semua timeslots, bisa difilter oleh hari"""
-        with self.db_manager.get_connection() as conn:
+        with self.db.get_connection() as conn:
             cursor = conn.cursor()
 
             if hari:
                 _ = cursor.execute(
                     """
-                    SELECT id, hari, start_time, end_time, created_at
+                    SELECT id, hari, mulai, selesai
                     FROM timeslots
                     WHERE hari = ?
-                    ORDER BY hari, start_time
+                    ORDER BY hari, mulai
                 """,
                     (hari,),
                 )
             else:
                 _ = cursor.execute("""
-                    SELECT id, hari, start_time, end_time
+                    SELECT id, hari, mulai, selesai
                     FROM timeslots
-                    ORDER BY hari, start_time
+                    ORDER BY hari, mulai
                 """)
 
             # return cursor.fetchall()
@@ -147,18 +134,18 @@ class TimeSlotManager:
 
     def get_timeslot_by_id(self, timeslot_id: int) -> TimeSlot | None:
         """Mendapatkan timeslot berdasarkan ID"""
-        with self.db_manager.get_connection() as conn:
+        with self.db.get_connection() as conn:
             cursor: sqlite3.Cursor = conn.cursor()
             _ = cursor.execute(
                 """
-                SELECT id, hari, start_time, end_time, created_at
+                SELECT id, hari, mulai, selesai
                 FROM timeslots
                 WHERE id = ?
             """,
                 (timeslot_id,),
             )
 
-            res = typing.cast(tuple[int, int, str, str, str] | None, cursor.fetchone())
+            res = typing.cast(tuple[int, int, str, str] | None, cursor.fetchone())
             if not res:
                 return None
             return TimeSlot(id=res[0], hari=res[1], mulai=res[2], selesai=res[3])
@@ -166,12 +153,12 @@ class TimeSlotManager:
     def delete_timeslot(self, timeslot_id: int) -> tuple[bool, str]:
         """Menghapus timeslot"""
         try:
-            with self.db_manager.get_connection() as conn:
+            with self.db.get_connection() as conn:
                 cursor = conn.cursor()
 
                 # Dapatkan info timeslot untuk log
                 _ = cursor.execute(
-                    "SELECT hari, start_time, end_time FROM timeslots WHERE id = ?",
+                    "SELECT hari, mulai, selesai FROM timeslots WHERE id = ?",
                     (timeslot_id,),
                 )
 
@@ -180,23 +167,8 @@ class TimeSlotManager:
                 if not res:
                     return False, "Timeslot tidak ditemukan"
 
-                timeslot = TimeSlot(hari=res[0], mulai=res[1], selesai=res[2])
-
                 # Hapus timeslot
                 _ = cursor.execute("DELETE FROM timeslots WHERE id = ?", (timeslot_id,))
-
-                # Log audit
-                _ = cursor.execute(
-                    """
-                    INSERT INTO audit_log (action, timeslot_id, details)
-                    VALUES (?, ?, ?)
-                """,
-                    (
-                        "DELETE",
-                        timeslot_id,
-                        f"Deleted timeslot {timeslot.hari} {timeslot.mulai}-{timeslot.selesai}",
-                    ),
-                )
 
                 conn.commit()
 
@@ -208,10 +180,9 @@ class TimeSlotManager:
     def clear_all_timeslots(self) -> tuple[bool, str]:
         """Menghapus semua timeslots"""
         try:
-            with self.db_manager.get_connection() as conn:
+            with self.db.get_connection() as conn:
                 cursor: sqlite3.Cursor = conn.cursor()
                 _ = cursor.execute("DELETE FROM timeslots")
-                _ = cursor.execute("DELETE FROM audit_log")
                 conn.commit()
 
             return True, "Semua timeslots berhasil dihapus"

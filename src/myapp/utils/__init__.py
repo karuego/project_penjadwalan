@@ -9,15 +9,16 @@ from .waktu_util import (
 )
 
 from .struct_pengajar import Pengajar as Pengajar
+from .struct_matakuliah import MataKuliah as MataKuliah
 from .struct_ruangan import Ruangan as Ruangan
 
 from .schedule_generator import ScheduleGenerator as ScheduleGenerator
-from .struktur import (
-    # Ruangan as Ruangan,
-    Dosen as Dosen,
-    MataKuliah as MataKuliah,
-    Waktu as Waktu,
-    Pengampu as Pengampu,
-    PreferensiDosen as PreferensiDosen,
-    JadwalItem as JadwalItem,
-)
+# from .struktur import (
+#     # Ruangan as Ruangan,
+#     Dosen as Dosen,
+#     # MataKuliah as MataKuliah,
+#     Waktu as Waktu,
+#     Pengampu as Pengampu,
+#     PreferensiDosen as PreferensiDosen,
+#     JadwalItem as JadwalItem,
+# )

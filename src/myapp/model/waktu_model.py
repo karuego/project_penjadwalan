@@ -16,6 +16,7 @@ from PySide6.QtCore import (
 from utils import (  # pyright: ignore[reportImplicitRelativeImport]
     TimeSlot,
     Database,
+    TimeSlotManager,
 )
 
 
@@ -29,6 +30,7 @@ class WaktuModel(QAbstractListModel):
     def __init__(self, db: Database, parent: QObject | None = None):
         super().__init__(parent)
         self._db: Database = db
+        self._timeslot_manager: TimeSlotManager = TimeSlotManager(self._db)
         self._data: list[TimeSlot] = []
 
     @typing.override
@@ -78,7 +80,7 @@ class WaktuModel(QAbstractListModel):
 
     def addTimeslotToDatabase(self, timeslot: TimeSlot) -> tuple[bool, str]:
         """Method untuk menambahkan timeslot ke database."""
-        success, timeslot_id, message = self._db.timeslot_manager.add_timeslot(
+        success, timeslot_id, message = self._timeslot_manager.add_timeslot(
             timeslot.getHari(), timeslot.getMulai(), timeslot.getSelesai()
         )
         if success:
@@ -86,9 +88,8 @@ class WaktuModel(QAbstractListModel):
 
         return success, message
 
-    # TODO: pisahkan logika untuk memuat data dari database dari model
     def loadDatabase(self) -> None:
-        all_timeslots: list[TimeSlot] = self._db.timeslot_manager.get_all_timeslots()
+        all_timeslots: list[TimeSlot] = self._timeslot_manager.get_all_timeslots()
         for timeslot in all_timeslots:
             self.addTimeslotToList(timeslot)
 
@@ -189,7 +190,7 @@ class WaktuModel(QAbstractListModel):
         index: int = self.getIndexById(id)
 
         self.beginRemoveRows(QModelIndex(), index, index)
-        success, _ = self._db.timeslot_manager.delete_timeslot(id)
+        success, _ = self._timeslot_manager.delete_timeslot(id)
         if not success:
             # TODO: tampilkan pesan ke alertDialog di QML
             return

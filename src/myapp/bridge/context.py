@@ -93,7 +93,8 @@ class ContextBridge(QObject):
     def loadDatabase(self) -> None:
         self.loadWaktu()
         self._waktu_model.loadDatabase()
-        self.loadPengajar()
+        self._pengajar_model.loadDatabase()
+        # self.loadPengajar()
 
     def loadWaktu(self) -> None:
         pass

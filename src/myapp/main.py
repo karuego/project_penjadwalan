@@ -1,4 +1,5 @@
 # This Python file uses the following encoding: utf-8
+import os
 import logging
 import signal
 import sys
@@ -9,6 +10,9 @@ from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtQml import QQmlApplicationEngine, QQmlError, qmlRegisterType
 from utils import (  # pyright: ignore[reportImplicitRelativeImport]
     TimeSlot,
+    Database,
+    TimeSlotManager,
+    ScheduleGenerator,
 )
 
 # import resources_rc
@@ -80,4 +84,14 @@ def run() -> None:
 
 
 if __name__ == "__main__":
+    db = Database()
+    # timeslot_manager: TimeSlotManager = TimeSlotManager(db)
+    # schedule_generator: ScheduleGenerator = ScheduleGenerator(
+    #     timeslot_manager
+    # )
+    if not db.is_exist():
+        db.init_database()
+        # # total_generated, results = schedule_generator.generate_schedule()
+        # _ = schedule_generator.generate_schedule()
+
     run()

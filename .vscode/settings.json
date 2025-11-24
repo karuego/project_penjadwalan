@@ -1,0 +1,16 @@
+{
+    "editor.fontFamily": "'JetBrains Mono',  Consolas, 'Courier New', monospace",
+    "editor.fontSize": 15,
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "files.trimFinalNewlines": true,
+    "python.analysis.typeCheckingMode": "off",
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "name": "project_penjadwalan",
+            "database": "database.sqlite3.db"
+        }
+    ]
+}
