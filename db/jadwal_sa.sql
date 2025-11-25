@@ -29,12 +29,6 @@ CREATE TABLE pengajar (
     preferensi_waktu TEXT
 );
 
-CREATE TABLE mata_kuliah (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nama TEXT NOT NULL,
-    semester INTEGER NOT NULL
-);
-
 CREATE TABLE ruangan (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nama TEXT NOT NULL UNIQUE,
@@ -43,23 +37,15 @@ CREATE TABLE ruangan (
 );
 
 -- Unit yang akan dijadwalkan
-CREATE TABLE komponen_mk (
+CREATE TABLE mata_kuliah (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    mata_kuliah_id INTEGER NOT NULL,
-    nama_komponen TEXT NOT NULL, -- Misal: 'Teori Basis Data', 'Praktikum Basis Data'
-    durasi_blok INTEGER NOT NULL, -- Jumlah blok 45 menit
+    nama TEXT NOT NULL, -- Misal: 'Teori Basis Data', 'Praktikum Basis Data'
     jenis TEXT NOT NULL DEFAULT 'teori', -- 'teori' atau 'praktek'
+    sks INTEGER NOT NULL, -- Jumlah blok 45 menit
+    semester INTEGER NOT NULL,
     jumlah_kelas INTEGER NOT NULL,
-    jumlah_sesi_praktikum INTEGER NOT NULL DEFAULT 1, -- Default 1, bisa 2 atau lebih
-    FOREIGN KEY (mata_kuliah_id) REFERENCES mata_kuliah(id)
-);
-
-CREATE TABLE pengampu (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
     pengajar_id TEXT,
-    komponen_mk_id INTEGER NOT NULL,
-    FOREIGN KEY (pengajar_id) REFERENCES pengajar(id),
-    FOREIGN KEY (komponen_mk_id) REFERENCES komponen_mk(id)
+    FOREIGN KEY (pengajar_id) REFERENCES pengajar(id)
 );
 
 -- CREATE TABLE preferensi_pengajar (

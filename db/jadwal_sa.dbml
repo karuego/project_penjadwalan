@@ -21,12 +21,6 @@ Table pengajar {
   preferensi_waktu text [note: 'comma-separated array of integers representing non-preferred days (1-7)']
 }
 
-Table mata_kuliah {
-  id integer [pk, increment]
-  nama text [not null]
-  semester integer [not null]
-}
-
 Table ruangan {
   id integer [pk, increment]
   nama text [unique, not null]
@@ -50,19 +44,13 @@ Table ruangan {
 //   preferensi_waktu.pengajar_id > pengajar.id [delete: cascade, update: no action]
 // }
 
-Table komponen_mk {
+Table mata_kuliah {
   id integer [pk, increment]
-  mata_kuliah_id integer [not null, ref: > mata_kuliah.id]
-  nama_komponen text [not null, note: "Misal: 'Teori Basis Data', 'Praktikum Basis Data'"]
-  durasi_blok integer [not null, note: "Jumlah blok 45 menit"]
+  nama text [not null, note: "Misal: 'Teori Basis Data', 'Praktikum Basis Data'"]
   jenis text [not null]
+  sks integer [not null, note: "Jumlah blok 45 menit"]
+  semester integer [not null]
   jumlah_kelas integer [not null]
-  jumlah_sesi_praktikum integer [not null, default: 1, note: "Default 1, bisa 2 atau lebih"]
-}
-
-Table pengampu {
-  id integer [pk, increment]
-  komponen_mk_id integer [not null, ref: > komponen_mk.id]
   pengajar_id integer [ref: > pengajar.id]
 }
 
