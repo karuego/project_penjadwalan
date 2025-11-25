@@ -159,7 +159,7 @@ class PengajarModel(QAbstractListModel):
             if pengajar.getId() != old_id:
                 continue
 
-            res: Result[str, str] = self.DB_update_pengajar(old_id, Pengajar(new_id, nama, tipe, waktu))
+            res: Result[str, str] = self.db.update_pengajar(old_id, Pengajar(new_id, nama, tipe, waktu))
             if is_err(res):
                 return False, res.unwrap_err()
 
@@ -256,7 +256,7 @@ class PengajarModel(QAbstractListModel):
         index: int = self.getIndexById(id)
 
         self.beginRemoveRows(QModelIndex(), index, index)
-        res: Result[str, str] = self.DB_delete_pengajar(id)
+        res: Result[str, str] = self.db.delete_pengajar(id)
         if is_err(res):
             self.endRemoveRows()
             return {"success": False, "message": res.unwrap_err()}
@@ -352,123 +352,14 @@ class PengajarModel(QAbstractListModel):
     #             break
 
     def loadDatabase(self) -> None:
-        semua_pengajar: list[Pengajar] = self.DB_get_all_pengajar()
+        semua_pengajar: list[Pengajar] = self.db.get_all_pengajar()
         for pengajar in semua_pengajar:
             self.addPengajarToList(pengajar)
 
-    def DB_get_all_pengajar(self) -> list[Pengajar]:
-        """Mendapatkan semua pengajar"""
-        with self.db.get_connection() as conn:
-            cursor = conn.cursor()
-
-            _ = cursor.execute("SELECT * FROM pengajar ORDER BY nama")
-            res: list[tuple[str, str, str, str]] | None = cursor.fetchall()
-            if not res:
-                return []
-
-            pengajar: list[Pengajar] = []
-            for item in res:
-                pengajar.append(
-                    Pengajar(id=item[0], nama=item[1], tipe=item[2], waktu=item[3])
-                )
-            return pengajar
-
-    def DB_get_pengajar_by_id(self, id: str) -> Result[Pengajar, str]:
-        """Mendapatkan pengajar berdasarkan ID"""
-        with self.db.get_connection() as conn:
-            cursor: sqlite3.Cursor = conn.cursor()
-            _ = cursor.execute(
-                """
-                    SELECT id, nama, jenis, preferensi_waktu
-                    FROM pengajar
-                    WHERE id = ?
-                """,
-                (id,),
-            )
-
-            res: tuple[str, str, str, str] | None = cursor.fetchone() # pyright: ignore[reportAny]
-            if not res:
-                return Err("Pengajar tidak ditemukan")
-
-            return Ok(Pengajar(id=res[0], nama=res[1], tipe=res[2], waktu=res[3]))
-
-    def DB_delete_pengajar(self, id: str) -> Result[str, str]:
-        """Menghapus data pengajar"""
-        try:
-            with self.db.get_connection() as conn:
-                cursor = conn.cursor()
-
-                _ = cursor.execute(
-                    "SELECT id, nama FROM pengajar WHERE id = ?",
-                    (id,),
-                )
-
-                res: tuple[str, str] | None = cursor.fetchone()  # pyright: ignore[reportAny]
-
-                if not res:
-                    return Err("Pengajar tidak ditemukan")
-
-                _ = cursor.execute("DELETE FROM pengajar WHERE id = ?", (id,))
-
-                conn.commit()
-
-            return Ok("Pengajar berhasil dihapus")
-
-        except sqlite3.Error as e:
-            return Err(f"Database error: {str(e)}")
-        except Exception as e:
-            return Err(f"Error: {str(e)}")
-
-    def DB_update_pengajar(self, id: str, pengajar: Pengajar) -> Result[str, str]:
-        """memperbarui data pengajar"""
-        try:
-            with self.db.get_connection() as conn:
-                cursor = conn.cursor()
-
-                _ = cursor.execute(
-                    "SELECT id, nama FROM pengajar WHERE id = ?",
-                    (id,),
-                )
-
-                res: tuple[str, str] | None = cursor.fetchone()  # pyright: ignore[reportAny]
-
-                if not res:
-                    return Err("Pengajar tidak ditemukan")
-
-                _ = cursor.execute(
-                    """
-                        UPDATE pengajar
-                        SET id = ?, nama = ?, jenis = ?, preferensi_waktu = ?
-                        WHERE id = ?
-                    """,
-                    (
-                        pengajar.getId(),
-                        pengajar.getNama(),
-                        pengajar.getTipe(),
-                        pengajar.getWaktu(),
-                        id,
-                    )
-                )
-
-                conn.commit()
-
-            return Ok("Pengajar berhasil diperbarui")
-
-        except sqlite3.Error as e:
-            return Err(f"Database error: {str(e)}")
-        except Exception as e:
-            return Err(f"Error: {str(e)}")
-
-    def DB_clear_all_pengajar(self) -> Result[str, str]:
-        """Menghapus semua pengajar"""
-        try:
-            with self.db.get_connection() as conn:
-                cursor: sqlite3.Cursor = conn.cursor()
-                _ = cursor.execute("DELETE FROM pengajar")
-                conn.commit()
-
-            return Ok("Semua timeslots berhasil dihapus")
-        except sqlite3.Error as e:
-            return Err(f"Database error: {str(e)}")
-        except Exception as e:
-            return Err(f"Error: {str(e)}")
+    @Slot()  # pyright: ignore[reportAny]
+    def reload(self) -> None:
+        # self.beginResetModel()
+        self._all_data.clear()
+        self._filtered.clear()
+        # self.endResetModel()
+        self.loadDatabase()

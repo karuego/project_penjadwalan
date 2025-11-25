@@ -26,11 +26,10 @@ class MataKuliahModel(QAbstractListModel):
     ID_ROLE: int = int(Qt.ItemDataRole.UserRole) + 1
     NAMA_ROLE: int = int(Qt.ItemDataRole.UserRole) + 2
     TIPE_ROLE: int = int(Qt.ItemDataRole.UserRole) + 3
-    SEMESTER_ROLE: int = int(Qt.ItemDataRole.UserRole) + 4
-    SKS_ROLE: int = int(Qt.ItemDataRole.UserRole) + 5
+    SKS_ROLE: int = int(Qt.ItemDataRole.UserRole) + 4
+    SEMESTER_ROLE: int = int(Qt.ItemDataRole.UserRole) + 5
     JUMLAH_KELAS_ROLE: int = int(Qt.ItemDataRole.UserRole) + 6
-    JUMLAH_SESI_PRAKTIKUM_ROLE: int = int(Qt.ItemDataRole.UserRole) + 7
-    PENGAMPU_ROLE: int = int(Qt.ItemDataRole.UserRole) + 8
+    PENGAMPU_ROLE: int = int(Qt.ItemDataRole.UserRole) + 7
 
     _filter_query: str = ""     # pyright: ignore[reportRedeclaration]
     _filter_tipe: str = "semua" # pyright: ignore[reportRedeclaration]
@@ -53,16 +52,16 @@ class MataKuliahModel(QAbstractListModel):
             return None
 
         matkul: MataKuliah = self._filtered[index.row()]
+        pengampu: Pengajar = matkul.getPengampu() or Pengajar()
 
         return {
-            self.ID_ROLE:                      matkul.getId(),
-            self.NAMA_ROLE:                    matkul.getNama(),
-            self.TIPE_ROLE:                    matkul.getTipe(),
-            self.SEMESTER_ROLE:                matkul.getSemester(),
-            self.SKS_ROLE:                     matkul.getSks(),
-            self.JUMLAH_KELAS_ROLE:            matkul.getKelas(),
-            self.JUMLAH_SESI_PRAKTIKUM_ROLE:   matkul.getSesi(),
-            self.PENGAMPU_ROLE:                matkul.getPengampu().asDict()
+            self.ID_ROLE:            matkul.getId(),
+            self.NAMA_ROLE:          matkul.getNama(),
+            self.TIPE_ROLE:          matkul.getTipe(),
+            self.SKS_ROLE:           matkul.getSks(),
+            self.SEMESTER_ROLE:      matkul.getSemester(),
+            self.JUMLAH_KELAS_ROLE:  matkul.getKelas(),
+            self.PENGAMPU_ROLE:      pengampu.asDict()
         }.get(role, None)
 
     @typing.override
@@ -81,13 +80,13 @@ class MataKuliahModel(QAbstractListModel):
     def roleNames(self) -> dict[int, QByteArray]:
         """Menghubungkan roles dengan nama yang akan digunakan di QML."""
         return {
-            self.ID_ROLE:                     QByteArray(b"id_"),
-            self.NAMA_ROLE:                   QByteArray(b"nama"),
-            self.TIPE_ROLE:                   QByteArray(b"tipe"),
-            self.SEMESTER_ROLE:               QByteArray(b"semester"),
-            self.SKS_ROLE:                    QByteArray(b"sks"),
-            self.JUMLAH_KELAS_ROLE:           QByteArray(b"kelas"),
-            self.JUMLAH_SESI_PRAKTIKUM_ROLE:  QByteArray(b"sesi")
+            self.ID_ROLE:            QByteArray(b"id_"),
+            self.NAMA_ROLE:          QByteArray(b"nama"),
+            self.TIPE_ROLE:          QByteArray(b"tipe"),
+            self.SKS_ROLE:           QByteArray(b"sks"),
+            self.SEMESTER_ROLE:      QByteArray(b"semester"),
+            self.JUMLAH_KELAS_ROLE:  QByteArray(b"kelas"),
+            self.PENGAMPU_ROLE:      QByteArray(b"pengampu"),
         }
 
     def setDataMataKuliah(self, data: list[MataKuliah]) -> None:
@@ -114,18 +113,15 @@ class MataKuliahModel(QAbstractListModel):
             if not all([
                 matkul.getNama(),
                 matkul.getTipe(),
-                matkul.getSemester(),
                 matkul.getSks(),
+                matkul.getSemester(),
                 matkul.getKelas(),
-                matkul.getSesi()
+                matkul.getPengampu()
             ]):
-                return False, "Field Nama, Jenis, Semester, SKS, Jumlah kelas, dan Jumlah sesi praktikum harus diisi"
+                return False, "Field Nama, Jenis, SKS, Semester, Jumlah kelas, dan Pengampu harus diisi"
 
-
-            query = "SELECT nama FROM mata_kuliah WHERE id = ?"
-            params: list[int] = [matkul.getId()]
-
-            _ = cursor.execute(query, params)
+            query = "SELECT nama FROM mata_kuliah WHERE nama LIKE ?"
+            _ = cursor.execute(query, (f"%{matkul.getNama()}%",))
             data_lama: str | None = typing.cast(str|None, cursor.fetchone())
 
             if data_lama is not None:
@@ -133,41 +129,26 @@ class MataKuliahModel(QAbstractListModel):
 
             _ = cursor.execute(
                 """
-                    INSERT INTO mata_kuliah (nama, semester)
-                    VALUES (?, ?)
+                    INSERT INTO mata_kuliah (nama, jenis, sks, semester, jumlah_kelas, pengajar_id)
+                    VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                (matkul.getNama(), matkul.getSemester()),
+                (
+                    matkul.getNama(),
+                    matkul.getTipe(),
+                    matkul.getSks(),
+                    matkul.getSemester(),
+                    matkul.getKelas(),
+                    matkul.getPengampu().getId() # pyright: ignore[reportOptionalMemberAccess]
+                )
             )
 
             matkul_id_baru: int | None = cursor.lastrowid
-            log.info(f"Kategori '{matkul.getNama()}' dibuat dengan ID: {matkul_id_baru}")
+            if not matkul_id_baru:
+                log.info("Gagal menambahkan mata kuliah")
+                return False, "Gagal menambahkan mata Kuliah"
 
-            new_matkul: dict[str, dict[str, str|int]] = {
-                'teori': {
-                    'nama': matkul.getNama(),
-                    'bobot': matkul.getSks()
-                },
-                'praktek': {
-                    'nama': '',
-                    'bobot': 0
-                }
-            }
-            if matkul.getTipe() == "praktek":
-                new_matkul['praktek']['nama'] = f"Praktikum {matkul.getNama()}"
-                new_matkul['praktek']['bobot'] = 1
-                new_matkul['teori']['bobot'] = int(new_matkul['teori']['bobot']) - 1
-
-            for jenis, komponen in new_matkul.items():
-                if jenis == "praktek" and not komponen['nama']:
-                    continue
-
-                _ = cursor.execute(
-                    """
-                        INSERT INTO komponen_mk (mata_kuliah_id, nama_komponen, durasi_blok, jenis, jumlah_kelas, jumlah_sesi_praktikum)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                    """,
-                    (matkul_id_baru, komponen['nama'], komponen['bobot'], jenis, matkul.getKelas(), matkul.getSesi()),
-                )
+            log.info(f"Mata Kuliah '{matkul.getNama()}' dibuat dengan ID: {matkul_id_baru}")
+            matkul.setId(matkul_id_baru)
 
             conn.commit()
             return True, "Mata Kuliah berhasil ditambahkan"
@@ -183,88 +164,122 @@ class MataKuliahModel(QAbstractListModel):
 
     def fnAdd(
         self,
-        id: int,
         nama: str,
         tipe: str,
-        semester: int,
         sks: int,
+        semester: int,
         kelas: int,
-        sesi: int,
-        pengajar_id: str
+        pengajar_teori_id: str,
+        pengajar_praktek_id: str,
     ) -> tuple[bool, str]:
         """Method untuk menambahkan mata kuliah baru ke model."""
         success = True
         message = "Berhasil"
 
         pengajar_model: PengajarModel = PengajarModel(self.db)
-        pengajar_res: Result[Pengajar, str] = pengajar_model.DB_get_pengajar_by_id(pengajar_id)
-        if is_err(pengajar_res):
-            return False, pengajar_res.unwrap_err()
-        pengajar: Pengajar = pengajar_res.unwrap()
+        pengajar_teori_res: Result[Pengajar, str] = pengajar_model.db.get_pengajar_by_id(pengajar_teori_id)
+        if is_err(pengajar_teori_res):
+            return False, pengajar_teori_res.unwrap_err()
+        pengajar_teori: Pengajar = pengajar_teori_res.unwrap()
 
-        matkul: MataKuliah = MataKuliah(
-            id,
-            nama.strip(),
-            tipe.strip(),
-            semester,
-            sks,
-            kelas,
-            sesi,
-            pengajar_id
-        )
+        new_matkul: dict[str, dict[str, str|int|Pengajar]] = {
+            'teori': {
+                'nama': nama.strip(),
+                'bobot': sks,
+                'pengampu': pengajar_teori
+            },
+            'praktek': {
+                'nama': '',
+                'bobot': 0,
+                'pengampu': Pengajar()
+            }
+        }
 
-        p: Result[Pengajar, str] = PengajarModel(self.db).DB_get_pengajar_by_id(pengajar_id)
-        if p.is_ok():
-            matkul.setPengampu(p.unwrap())
+        if tipe == "praktek":
+            new_matkul['teori']['bobot'] = new_matkul['teori']['bobot'] - 1 # pyright: ignore[reportOperatorIssue]
+            new_matkul['praktek']['nama'] = f"Praktikum {nama.strip()}"
+            new_matkul['praktek']['bobot'] = 1
 
-        success, message = self.addMataKuliahToDatabase(matkul)
-        if not success:
-            return success, message
+            pengajar_praktek_res: Result[Pengajar, str] = pengajar_model.db.get_pengajar_by_id(pengajar_praktek_id)
+            if is_err(pengajar_praktek_res):
+                return False, pengajar_praktek_res.unwrap_err()
+            pengajar_praktek: Pengajar = pengajar_praktek_res.unwrap()
+            new_matkul['praktek']['pengampu'] = pengajar_praktek
 
-        self.addMataKuliahToList(matkul)
-        return success, message
+        for jenis, komponen in new_matkul.items():
+            if jenis == "praktek" and komponen['nama'] == "":
+                continue
 
-    @Slot(int, str, str, int, int, int, int, str, result="QVariant")  # pyright: ignore[reportAny, reportArgumentType]
+            matkul = MataKuliah(
+                id=None,
+                nama=komponen['nama'], # pyright: ignore[reportArgumentType]
+                tipe=jenis,
+                sks=komponen['bobot'], # pyright: ignore[reportArgumentType]
+                semester=semester,
+                kelas=kelas,
+                pengampu=komponen['pengampu'] # pyright: ignore[reportArgumentType]
+            )
+
+            success, message = self.addMataKuliahToDatabase(matkul)
+            if not success:
+                return success, message
+
+            self.addMataKuliahToList(matkul)
+
+        return True, "Mata kuliah baru berhasil ditambahkan"
+
+    @Slot(str, str, int, int, int, str, str, result="QVariant")  # pyright: ignore[reportAny, reportArgumentType]
     def add(
         self,
-        id: int,
         nama: str,
         tipe: str,
-        semester: int,
         sks: int,
+        semester: int,
         kelas: int,
-        sesi: int,
-        pengajar_id: str,
+        pengajar_teori_id: str,
+        pengajar_praktek_id: str,
     ) -> dict[str, bool | str]:
         """Menambahkan mata kuliah baru ke model dan database."""
-        success, message = self.fnAdd(id, nama, tipe, semester, sks, kelas, sesi, pengajar_id)
+        success, message = self.fnAdd(nama, tipe, sks, semester, kelas, pengajar_teori_id, pengajar_praktek_id)
         return {"success": success, "message": message}
 
     def fnUpdate(
-        self, old_id: str, new_id: str, nama: str, tipe: str, waktu: str
+        self, id: int, nama: str, semester: int, kelas: int, pengampu_id: str
     ) -> tuple[bool, str]:
-        """Method untuk mengubah data pengajar yang ada di model."""
+        """Method untuk mengubah data mata kuliah yang ada di model."""
         success: bool = False
-        message: str = "Gagal memperbarui data pengajar"
+        message: str = "Gagal memperbarui data mata kuliah"
 
         # filtered_data: list[Pengajar] = []
-        for index, pengajar in enumerate[MataKuliah](self._all_data):
-            if pengajar.getId() != old_id:
+        for index, matkul in enumerate[MataKuliah](self._all_data):
+            if matkul.getId() != id:
                 continue
 
-            res: Result[str, str] = self.DB_update_pengajar(old_id, Pengajar(new_id, nama, tipe, waktu))
+            pengampu_res: Result[Pengajar, str] = PengajarModel(self.db).db.get_pengajar_by_id(pengampu_id)
+            if is_err(pengampu_res):
+                return False, pengampu_res.unwrap_err()
+            pengampu: Pengajar = pengampu_res.unwrap()
+
+            res: Result[str, str] = self.db.update_matakuliah(
+                id=id,
+                matkul=MataKuliah(
+                    id=id,
+                    nama=nama,
+                    semester=semester,
+                    kelas=kelas,
+                    pengampu=pengampu
+                )
+            )
             if is_err(res):
                 return False, res.unwrap_err()
 
             success = True
             message = res.unwrap()
 
-            if pengajar.getId() != new_id:
-                pengajar.setId(new_id)
-
-            pengajar.setNama(nama)
-            _ = pengajar.setTipe(tipe)
-            pengajar.setWaktu(waktu)
+            matkul.setNama(nama)
+            matkul.setSemester(semester)
+            matkul.setKelas(kelas)
+            matkul.setPengampu(pengampu)
 
             # Beri tahu QML View bahwa data pada index tersebut telah berubah untuk role tertentu
             roles_to_notify: list[int] = [PengajarModel.ID_ROLE, PengajarModel.NAMA_ROLE, PengajarModel.TIPE_ROLE, PengajarModel.WAKTU_ROLE]
@@ -276,35 +291,35 @@ class MataKuliahModel(QAbstractListModel):
         self.fnFilter(self._filter_query, self._filter_tipe)
         return success, message
 
-    @Slot(str, str, str, str, str, result="QVariant")  # pyright: ignore[reportAny, reportArgumentType]
+    @Slot(int, str, int, int, str, result="QVariant")  # pyright: ignore[reportAny, reportArgumentType]
     def update(
-        self, old_id: str, new_id: str, nama: str, tipe: str, waktu: str
+        self, id: int, nama: str, semester: int, kelas: int, pengampu_id: str
     ) -> dict[str, bool | str]:
         """Memperbarui item berdasarkan ID dan memancarkan sinyal dataChanged."""
-        success, message = self.fnUpdate(old_id, new_id, nama, tipe, waktu)
+        success, message = self.fnUpdate(id, nama, semester, kelas, pengampu_id)
         return {"success": success, "message": message}
 
-    def getIndexById(self, id: str) -> int:
+    def getIndexById(self, id: int) -> int:
         # for i, item in enumerate(self._all_data):
-        for i, item in enumerate(self._filtered):
+        for i, item in enumerate[MataKuliah](self._filtered):
             if item.getId() == id:
                 return i
 
         return -1
 
-    def fnGetById(self, id: str) -> Pengajar | None:
-        """Mengambil data pengajar berdasarkan id."""
-        for pengajar in self._all_data:
-            if pengajar.getId() == id:
-                return pengajar
+    def fnGetById(self, id: int) -> MataKuliah | None:
+        """Mengambil data mata kuliah berdasarkan id."""
+        for matkul in self._all_data:
+            if matkul.getId() == id:
+                return matkul
 
         return None
 
-    @Slot(str, result=QObject)  # pyright: ignore[reportAny]
-    def getById(self, id: str) -> Pengajar | None:
+    @Slot(int, result=QObject)  # pyright: ignore[reportAny]
+    def getById(self, id: int) -> MataKuliah | None:
         return self.fnGetById(id)
 
-    def fnGetByIndex(self, index: int) -> Pengajar | None:
+    def fnGetByIndex(self, index: int) -> MataKuliah | None:
         """
         Method untuk mengambil data pengajar berdasarkan index.
         """
@@ -315,11 +330,11 @@ class MataKuliahModel(QAbstractListModel):
         return None
 
     @Slot(int, result=QObject)  # pyright: ignore[reportAny]
-    def getByIndex(self, index: int) -> Pengajar | None:
+    def getByIndex(self, index: int) -> MataKuliah | None:
         return self.fnGetByIndex(index)
 
     @Slot(int, result=QObject)  # pyright: ignore[reportAny]
-    def getFilteredByIndex(self, index: int) -> Pengajar | None:
+    def getFilteredByIndex(self, index: int) -> MataKuliah | None:
         if 0 <= index < self.rowCount():
             return self._filtered[index]
 
@@ -344,12 +359,12 @@ class MataKuliahModel(QAbstractListModel):
     def removeByIndex(self, index: int) -> None:
         self.fnRemoveByIndex(index)
 
-    def fnRemoveById(self, id: str) -> dict[str, bool | str]:
-        """Method untuk menghapus pengajar berdasarkan id key."""
+    def fnRemoveById(self, id: int) -> dict[str, bool | str]:
+        """Method untuk menghapus mata kuliah berdasarkan id key."""
         index: int = self.getIndexById(id)
 
         self.beginRemoveRows(QModelIndex(), index, index)
-        res: Result[str, str] = self.DB_delete_pengajar(id)
+        res: Result[str, str] = self.db.delete_matakuliah(id)
         if is_err(res):
             self.endRemoveRows()
             return {"success": False, "message": res.unwrap_err()}
@@ -361,8 +376,8 @@ class MataKuliahModel(QAbstractListModel):
 
         return {"success": True, "message": res.unwrap()}
 
-    @Slot(str, result="QVariant")  # pyright: ignore[reportAny, reportArgumentType]
-    def removeById(self, id: str) -> dict[str, bool | str]:
+    @Slot(int, result="QVariant")  # pyright: ignore[reportAny, reportArgumentType]
+    def removeById(self, id: int) -> dict[str, bool | str]:
         return self.fnRemoveById(id)
 
     def fnFilter(self, query: str, tipe: str) -> None:
@@ -385,7 +400,7 @@ class MataKuliahModel(QAbstractListModel):
             pattern = None  # Abaikan regex yg tdk valdi
 
         # Filter data
-        def cocok(p: Pengajar):
+        def cocok(p: MataKuliah):
             nama_cocok = True
             tipe_cocok = True
 
@@ -445,123 +460,14 @@ class MataKuliahModel(QAbstractListModel):
     #             break
 
     def loadDatabase(self) -> None:
-        semua_pengajar: list[Pengajar] = self.DB_get_all_pengajar()
-        for pengajar in semua_pengajar:
-            self.addPengajarToList(pengajar)
+        semua_matkul: list[MataKuliah] = self.db.get_all_matakuliah()
+        for matkul in semua_matkul:
+            self.addMataKuliahToList(matkul)
 
-    def DB_get_all_pengajar(self) -> list[Pengajar]:
-        """Mendapatkan semua pengajar"""
-        with self.db.get_connection() as conn:
-            cursor = conn.cursor()
-
-            _ = cursor.execute("SELECT * FROM pengajar ORDER BY nama")
-            res: list[tuple[str, str, str, str]] | None = cursor.fetchall()
-            if not res:
-                return []
-
-            pengajar: list[Pengajar] = []
-            for item in res:
-                pengajar.append(
-                    Pengajar(id=item[0], nama=item[1], tipe=item[2], waktu=item[3])
-                )
-            return pengajar
-
-    def DB_get_pengajar_by_id(self, id: int) -> Result[Pengajar, str]:
-        """Mendapatkan pengajar berdasarkan ID"""
-        with self.db.get_connection() as conn:
-            cursor: sqlite3.Cursor = conn.cursor()
-            _ = cursor.execute(
-                """
-                    SELECT id, nama, jenis, preferensi_waktu
-                    FROM pengajar
-                    WHERE id = ?
-                """,
-                (id,),
-            )
-
-            res: tuple[str, str, str, str] | None = cursor.fetchone() # pyright: ignore[reportAny]
-            if not res:
-                return Err("Pengajar tidak ditemukan")
-
-            return Ok(Pengajar(id=res[0], nama=res[1], tipe=res[2], waktu=res[3]))
-
-    def DB_delete_pengajar(self, id: str) -> Result[str, str]:
-        """Menghapus data pengajar"""
-        try:
-            with self.db.get_connection() as conn:
-                cursor = conn.cursor()
-
-                _ = cursor.execute(
-                    "SELECT id, nama FROM pengajar WHERE id = ?",
-                    (id,),
-                )
-
-                res: tuple[str, str] | None = cursor.fetchone()  # pyright: ignore[reportAny]
-
-                if not res:
-                    return Err("Pengajar tidak ditemukan")
-
-                _ = cursor.execute("DELETE FROM pengajar WHERE id = ?", (id,))
-
-                conn.commit()
-
-            return Ok("Pengajar berhasil dihapus")
-
-        except sqlite3.Error as e:
-            return Err(f"Database error: {str(e)}")
-        except Exception as e:
-            return Err(f"Error: {str(e)}")
-
-    def DB_update_pengajar(self, id: str, pengajar: Pengajar) -> Result[str, str]:
-        """memperbarui data pengajar"""
-        try:
-            with self.db.get_connection() as conn:
-                cursor = conn.cursor()
-
-                _ = cursor.execute(
-                    "SELECT id, nama FROM pengajar WHERE id = ?",
-                    (id,),
-                )
-
-                res: tuple[str, str] | None = cursor.fetchone()  # pyright: ignore[reportAny]
-
-                if not res:
-                    return Err("Pengajar tidak ditemukan")
-
-                _ = cursor.execute(
-                    """
-                        UPDATE pengajar
-                        SET id = ?, nama = ?, jenis = ?, preferensi_waktu = ?
-                        WHERE id = ?
-                    """,
-                    (
-                        pengajar.getId(),
-                        pengajar.getNama(),
-                        pengajar.getTipe(),
-                        pengajar.getWaktu(),
-                        id,
-                    )
-                )
-
-                conn.commit()
-
-            return Ok("Pengajar berhasil diperbarui")
-
-        except sqlite3.Error as e:
-            return Err(f"Database error: {str(e)}")
-        except Exception as e:
-            return Err(f"Error: {str(e)}")
-
-    def DB_clear_all_pengajar(self) -> Result[str, str]:
-        """Menghapus semua pengajar"""
-        try:
-            with self.db.get_connection() as conn:
-                cursor: sqlite3.Cursor = conn.cursor()
-                _ = cursor.execute("DELETE FROM pengajar")
-                conn.commit()
-
-            return Ok("Semua timeslots berhasil dihapus")
-        except sqlite3.Error as e:
-            return Err(f"Database error: {str(e)}")
-        except Exception as e:
-            return Err(f"Error: {str(e)}")
+    @Slot()  # pyright: ignore[reportAny]
+    def reload(self) -> None:
+        # self.beginResetModel()
+        self._all_data.clear()
+        self._filtered.clear()
+        # self.endResetModel()
+        self.loadDatabase()

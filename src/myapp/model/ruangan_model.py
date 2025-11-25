@@ -1,15 +1,20 @@
-from utils import Database  # pyright: ignore[reportImplicitRelativeImport]
-
+from result.result import Result
+from result import Result, Ok, Err
+import sqlite3
 import typing
+from typing import Literal
 from PySide6.QtCore import (
-    Qt,
-    QByteArray,
-    QObject,
     QAbstractListModel,
+    QByteArray,
     QModelIndex,
+    QObject,
     QPersistentModelIndex,
+    Qt,
+    Slot,
 )
-from utils import Ruangan  # pyright: ignore[reportImplicitRelativeImport]
+from utils.database import Database  # pyright: ignore[reportImplicitRelativeImport]
+from utils.struct_ruangan import Ruangan  # pyright: ignore[reportImplicitRelativeImport]
+import log # pyright: ignore[reportImplicitRelativeImport]
 
 
 class RuanganModel(QAbstractListModel):
@@ -19,6 +24,7 @@ class RuanganModel(QAbstractListModel):
 
     def __init__(self, db: Database, parent: QObject | None = None):
         super().__init__(parent)
+        self.db: Database = db
         self._data: list[Ruangan] = []
 
     @typing.override
@@ -26,12 +32,12 @@ class RuanganModel(QAbstractListModel):
         self,
         index: QModelIndex | QPersistentModelIndex,
         role: int = Qt.ItemDataRole.DisplayRole,
-    ) -> str | None:
+    ) -> int | str | None:
         """
         Mengembalikan data untuk item dan role tertentu.
         """
         # beri tahu type checker bahwa kita perlakukan index sebagai QModelIndex
-        idx = typing.cast(QModelIndex, index)
+        idx: QModelIndex = typing.cast(QModelIndex, index)
 
         if not idx.isValid():
             return None
@@ -71,3 +77,153 @@ class RuanganModel(QAbstractListModel):
             self.NAMA_ROLE: QByteArray(b"nama"),
             self.TIPE_ROLE: QByteArray(b"tipe"),
         }
+
+    def addToList(self, ruang: Ruangan) -> None:
+        """Method untuk menambahkan ruangan ke database."""
+        self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
+        self._data.append(ruang)
+        self.endInsertRows()
+
+    def addToDatabase(self, ruang: Ruangan) -> Result[str, str]:
+        """Method untuk menambahkan ruangan ke database."""
+        try:
+            # Validasi input
+            if not all([ruang.getNama(), ruang.getTipe()]):
+                return Err("Semua field harus diisi")
+
+            # Insert ke database
+            with self.db.get_connection() as conn:
+                cursor: sqlite3.Cursor = conn.cursor()
+
+                # Cek duplikasi nama ruangan
+                query = "SELECT nama FROM ruangan WHERE nama LIKE ?"
+                _ = cursor.execute(query, (ruang.getNama(),))
+                data_lama: str | None = typing.cast(str|None, cursor.fetchone())
+
+                if data_lama is not None:
+                    return Err(f'Ruangan "{ruang.getNama()}" sudah ada.')
+
+                _ = cursor.execute(
+                    "INSERT INTO ruangan (nama, jenis) VALUES (?, ?)",
+                    (ruang.getNama(), ruang.getTipe()),
+                )
+
+                id_ruang_baru: int | None = cursor.lastrowid
+                if not id_ruang_baru:
+                    log.info("Gagal menambahkan ruangan")
+                    return Err("Gagal menambahkan ruangan")
+
+                log.info(f"Ruangan '{ruang.getNama()}' dibuat dengan ID: {id_ruang_baru}")
+                ruang.setId(id_ruang_baru)
+
+                conn.commit()
+
+            return Ok("Timeslot berhasil ditambahkan")
+
+        except sqlite3.Error as e:
+            return Err(f"Database error: {str(e)}")
+        except Exception as e:
+            return Err(f"Error: {str(e)}")
+
+    def loadDatabase(self) -> None:
+        ruangan: list[Ruangan] = self.db.get_all_ruangan()
+        for ruang in ruangan:
+            self.addToList(ruang)
+
+    @Slot()  # pyright: ignore[reportAny]
+    def reload(self) -> None:
+        self.beginResetModel()
+        self._data.clear()
+        self.loadDatabase()
+        self.endResetModel()
+
+    def fnAdd(self, nama: str, is_lab: bool) -> Result[str, str]:
+        """Method untuk menambahkan ruangan baru."""
+        tipe: Literal['teori', 'praktek'] = "praktek" if is_lab else "teori"
+        ruang: Ruangan = Ruangan(
+            nama=nama,
+            tipe=tipe
+        )
+
+        result: Result[str, str] = self.addToDatabase(ruang)
+        if result.is_err():
+            return result
+
+        self.addToList(ruang)
+
+        return Ok("Berhasil menambahkan ruangan baru.")
+
+    @Slot(str, bool, result="QVariant")  # pyright: ignore[reportAny, reportArgumentType]
+    def add(self, nama: str, is_lab: bool) -> dict[str, bool | str]:
+        """Method QML untuk menambahkan ruangan baru."""
+        result: Result[str, str] = self.fnAdd(nama, is_lab)
+
+        success: bool = result.is_ok()
+        message: str = result.unwrap() if success else result.unwrap_err()
+
+        return {"success": success, "message": message}
+
+
+    def fnGetIndex(self, index: int) -> Ruangan | None:
+        if 0 <= index < len(self._data):
+            return self._data[index]
+        return None
+
+    @Slot()  # pyright: ignore[reportAny]
+    def getIndex(self, index: int) -> Ruangan | None:
+        return self.fnGetIndex(index)
+
+    def fnGetId(self, id: int) -> Ruangan | None:
+        """
+        Method untuk mengambil data pengajar berdasarkan id.
+        """
+        for item in self._data:
+            if int(item.getId()) == int(id):
+                print(item.id)
+                return item
+
+        return None
+
+    @Slot(int, result=QObject)  # pyright: ignore[reportAny]
+    def getId(self, id: int) -> Ruangan | None:
+        return self.fnGetId(id)
+
+    def getIndexById(self, id: int) -> int:
+        for i, item in enumerate(self._data):
+            if int(item.getId()) == int(id):
+                return i
+
+        return -1
+
+    def fnRemoveIndex(self, index: int) -> None:
+        """Method untuk menghapus pengajar berdasarkan index dari pada ListView QML."""
+        if 0 <= index < self.rowCount():
+            self.beginRemoveRows(QModelIndex(), index, index)
+            del self._data[index]
+            print(index)
+            self.endRemoveRows()
+
+    @Slot(int)  # pyright: ignore[reportAny]
+    def removeIndex(self, index: int) -> None:
+        self.fnRemoveIndex(index)
+
+    def fnRemoveId(self, id: int) -> Result[str, str]:
+        """Method untuk menghapus ruangan berdasarkan id."""
+        index: int = self.getIndexById(id)
+
+        self.beginRemoveRows(QModelIndex(), index, index)
+        res: Result[str, str] = self.db.delete_ruangan(id)
+        if res.is_err():
+            return res
+
+        del self._data[index]
+        self.endRemoveRows()
+
+    @Slot(int)  # pyright: ignore[reportAny]
+    def removeId(self, id: int) -> dict[str, bool | str]:
+        result: Result[str, str] = self.fnRemoveId(id)
+
+        success: bool = result.is_ok()
+        message: str = result.unwrap() if success else result.unwrap_err()
+
+        return {"success": success, "message": message}

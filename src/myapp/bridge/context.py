@@ -72,8 +72,12 @@ class ContextBridge(QObject):
         return self._pengajar_proxy
 
     @Property(QObject, constant=True)
-    def mataKuliahModel(self) -> MataKuliahModel:
+    def matakuliahModel(self) -> MataKuliahModel:
         return self._matakuliah_model
+
+    @Property(QObject, constant=True)
+    def ruanganModel(self) -> RuanganModel:
+        return self._ruangan_model
 
     @Property(list, constant=True, final=True)
     def namaNamaHari(self) -> list[str]:
@@ -91,17 +95,11 @@ class ContextBridge(QObject):
         return allDays
 
     def loadDatabase(self) -> None:
-        self.loadWaktu()
         self._waktu_model.loadDatabase()
         self._pengajar_model.loadDatabase()
         # self.loadPengajar()
-
-    def loadWaktu(self) -> None:
-        pass
-
-    @Slot()  # pyright: ignore[reportAny]
-    def reloadWaktu(self) -> None:
-        self.loadWaktu()
+        self._matakuliah_model.loadDatabase()
+        self._ruangan_model.loadDatabase()
 
     def loadPengajar(self):
         data_pengajar: list[Pengajar] = [

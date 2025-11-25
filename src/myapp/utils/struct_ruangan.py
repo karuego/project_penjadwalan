@@ -1,25 +1,25 @@
-from typing import override
+from typing import Iterator, override
 from PySide6.QtCore import QObject, Property
 
 
 class Ruangan(QObject):
     def __init__(
         self,
-        id: str = "",
+        id: int = "",
         nama: str = "",
         tipe: str = "",
         parent: QObject | None = None,
     ):
         super().__init__(parent)
 
-        self._id: str = id
+        self._id: int = id
         self._nama: str = nama
         self._tipe: str = tipe
 
-    def getId(self) -> str:
+    def getId(self) -> int:
         return self._id
 
-    def setId(self, id: str) -> None:
+    def setId(self, id: int) -> None:
         self._id = id
 
     def getNama(self) -> str:
@@ -39,8 +39,8 @@ class Ruangan(QObject):
             return False
         return True
 
-    @Property(str)
-    def id(self) -> str:
+    @Property(int)
+    def id(self) -> int:
         return self._id
 
     @Property(int)
@@ -51,7 +51,7 @@ class Ruangan(QObject):
     def tipe(self) -> str:
         return self._tipe
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[tuple[str, int | str]]:
         return iter(
             {
                 "id": self._id,
@@ -73,4 +73,4 @@ class Ruangan(QObject):
 
     @override
     def __str__(self) -> str:
-        return f"TimeSlot(id={self._id}, nama={self._nama}, tipe={self._tipe})"
+        return f"Ruang(id={self._id}, nama=\"{self._nama}\", tipe=\"{self._tipe})\""
