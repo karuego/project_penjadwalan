@@ -4,11 +4,6 @@ import QtQuick.Window
 import QtQuick.Layouts
 import QtQuick.Controls.Material
 
-import "../components"
-import "../helpers/Hari.js" as Hari
-import "../helpers/String.js" as String
-import Theme // qmllint disable import
-
 Page {
     id: root
     title: "Daftar Mata Kuliah"
@@ -20,8 +15,11 @@ Page {
     property Snackbar snackbarRef
 
     property var contextBridgeRef: contextBridge // qmllint disable unqualified
+    property var waktuModelRef: contextBridgeRef.waktuModel
     property var pengajarModelRef: contextBridgeRef.pengajarModel
     property var matakuliahModelRef: contextBridgeRef.matakuliahModel
+    property var ruanganModelRef: contextBridgeRef.ruanganModel
+    property var jadwalModelRef: contextBridgeRef.jadwalModel
 
     // property string reloadMessage: "Memuat ulang database"
     // property var reloadFunc: () => matakuliahModelRef.reload()
@@ -413,19 +411,5 @@ Page {
             action: action,
             matakuliahId: idn
         });
-    }
-
-    component TimeSlot: QtObject {
-        property string id_
-        property string nama
-        property string tipe
-        property string waktu
-    }
-
-    component Pengajar: QtObject {
-        property string id_
-        property string nama
-        property string tipe
-        property string waktu
     }
 }

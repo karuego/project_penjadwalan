@@ -1,138 +1,160 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Window
 import QtQuick.Layouts
+import QtQuick.Controls
 import QtQuick.Controls.Material
+import QtQml
 
 import "../components"
-// qmllint disable import
-import Theme
+import "../helpers/String.js" as String
+import Theme // qmllint disable import
 
 Page {
+    id: root
+    objectName: "ruanganPage"
     title: "Daftar Ruangan"
+
+    // readonly property size textFieldSize: Qt.size(150, 55)
 
     property StackView stackViewRef
     property CustomDialog confirmDialogRef
     property CustomDialog alertDialogRef
+    property Snackbar snackbarRef
 
     property var contextBridgeRef: contextBridge // qmllint disable unqualified
-    property var ruangModelRef: contextBridgeRef.ruangModel
-    property var ruangProxyRef: contextBridgeRef.ruangProxy
+    property var ruanganModelRef: contextBridgeRef.ruanganModel
 
-    // property string reloadMessage: "Memuat ulang database"
-    // property var reloadFunc: () => ruangModelRef.reload()
+    property string reloadMessage: "Memuat ulang database..."
+    property var reloadFunc: () => ruanganModelRef.reload()
 
-    RowLayout {
+    ColumnLayout {
         spacing: 10
         anchors.fill: parent
 
-        ColumnLayout {
-            // Layout.alignment: Qt.AlignLeft
-            Layout.preferredWidth: parent.width / 2.5
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.alignment: Qt.AlignHCenter
+            spacing: 32
 
-            RowLayout {
-                // implicitHeight: 42
-                // implicitWidth: 300
-                Layout.alignment: Qt.AlignLeft
+            TextField {
+                id: textFieldNama
+                placeholderText: qsTr("Nama Ruangan")
+                font.pixelSize: 13
+                // Layout.fillWidth: true
+                Layout.alignment: Qt.AlignVCenter
+                background.implicitHeight: 50
+                background.implicitWidth: 265
+            }
 
-                Label {
-                    text: "Nama Ruangan :"
-                    // font.pixelSize: 24
-                    color: "#2ecc71"
-                }
-
-                Rectangle {
-                    // Layout.fillWidth: true
-                    // Layout.fillHeight: true
-                    Layout.preferredWidth: 200
-                    implicitHeight: inputNama.height
-
-                    color: "#f0f0f0"
-                    border.color: "gray"
-                    // border.width: 1
-                    // radius: 8
-
-                    /*Text {
-                        id: placeholder
-                        text: "Ketik sesuatu di sini..."
-                        color:"gray"
-                        font.italic: true
-                        anchors.fill: parent
-                        anchors.leftMargin: 4
-                        verticalAlignment: Text.AlignVCenter
-                        visible: !inputNama.length && !inputNama.activeFocus
-                    }*/
-
-                    TextInput {
-                        id: inputNama
-                        text: "asd"
-                        width: 200
-                        height: 42
-                        clip: true
-                        anchors.fill: parent
-
-                        // onTextChanged: {
-                        //     display.text = "Halo, " + this.text;
-                        // }
-                    }
-                }
+            CheckBox {
+                id: checkboxTipeLab
+                text: qsTr("Laboratorium")
+                font.pixelSize: 13
+                Layout.alignment: Qt.AlignVCenter
             }
 
             Button {
-                text: "Simpan"
-                onClicked:
-                // stackView.pop()
-                {}
+                id: tambahWaktu
+                text: qsTr("Tambah")
+                Accessible.name: qsTr("Tambah Ruangan")
+                Material.foreground: Material.Pink
+
+                implicitWidth: 145
+                implicitHeight: 55
+                Layout.alignment: Qt.AlignVCenter
+                Layout.bottomMargin: 16
+
+                background: Rectangle {
+                    radius: 8
+
+                    // Atur warna Rectangle agar berubah secara dinamis
+                    color: tambahWaktu.down ? "#9c9c9c" : tambahWaktu.hovered ? "#cccaca" : "#e0e0e0"
+
+                    // border.color: "#adadad"
+                    // border.width: 1
+
+                    // Animasi halus untuk perubahan warna
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: 150
+                        }
+                    }
+                }
+
+                onClicked: {
+                    const result = root.ruanganModelRef.add(textFieldNama.text, checkboxTipeLab.checked);
+                    if (!result.success) {
+                        root.alertDialogRef.openWithCallback("Peringatan", result.message, null, null);
+                    } else {
+                        root.snackbarRef.show(`Ruangan "${textFieldNama.text}" berhasil ditambahkan.`);
+                        textFieldNama.text = "";
+                        checkboxTipeLab.checked = false;
+                    }
+                }
             }
         }
 
-        ColumnLayout {
-            // Layout.alignment: Qt.AlignRight
-            // Layout.preferredWidth: parent.width / 2 + 500
+        // qmllint disable
+        SortFilterProxyModel {
+            id: proxy
+            model: root.ruanganModelRef
+            sorters: [
+                RoleSorter {
+                    roleName: "nama"
+                    priority: 0
+                }
+            ]
+        }
+        // qmllint enable
 
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
+        Rectangle {
+            id: kotakList
+            Layout.fillWidth: true
+            Layout.fillHeight: true
 
-                border.color: "#cccccc"
-                border.width: 1
-                radius: 8
+            border.color: "#cccccc"
+            border.width: 1
+            radius: 8
+
+            ScrollView {
+                anchors.fill: parent
+                anchors.margins: 4
 
                 ListView {
                     id: listView
-                    model: productModel
-                    anchors.margins: 8
-                    spacing: 5
+                    spacing: 8
                     anchors.fill: parent
+                    boundsBehavior: Flickable.StopAtBounds
                     clip: true
 
-                    // PENTING: Gunakan properti Layout, bukan anchors
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
+                    model: proxy
 
-                    // Delegate ini akan dibuat ulang untuk setiap item di dalam model.
                     delegate: ItemDelegate {
                         id: item
-                        // Setiap item akan mengisi lebar ListView
-                        width: parent.width
+                        width: ListView.view.width
+                        // highlighted: ListView.isCurrentItem
 
                         required property int index
-                        required property string productName
-                        required property string productDescription
+                        required property int id_
+                        required property string nama
+                        required property string tipe
 
-                        Label {
-                            id: nameLabel
-                            text: item.productName
-                            font.pixelSize: 18
-                            font.bold: true
-                        }
+                        RowLayout {
+                            spacing: 8
 
-                        Label {
-                            text: item.productDescription
-                            anchors.top: nameLabel.bottom // Posisikan di bawah teks besar
-                            anchors.topMargin: 2
-                            font.pixelSize: 13
-                            color: "#555"
+                            Label {
+                                id: nameLabel
+                                text: item.nama
+                                font.pixelSize: 18
+                                font.bold: true
+                            }
+
+                            Label {
+                                text: String.capitalizeFirstLetter(item.tipe === "praktek" ? "Laboratorium" : "")
+                                font.pixelSize: 11
+                                color: "#555"
+                                Layout.alignment: Qt.AlignTop
+                            }
                         }
 
                         IconButton {
@@ -140,66 +162,26 @@ Page {
                             iconColor: "red"
                             // tooltipText: "Hapus"
                             anchors.right: parent.right
-                            onClicked: {
-                                console.log("Anda menghapus item:", item.productName);
-                            }
-                        }
+                            anchors.rightMargin: 16
 
-                        onClicked: {
-                            console.log("Anda menekan item:", item.productName);
+                            onClicked: {
+                                const message = `Apakah anda ingin menghapus ruangan: "${item.nama}"?`;
+
+                                // qmllint disable unqualified
+                                root.confirmDialogRef.openWithCallback(qsTr("Konfirmasi penghapusan ruangan"), message, function () {
+                                    const result = root.ruanganModelRef.removeId(id_);
+                                    if (!result.success) {
+                                        root.alertDialogRef.openWithCallback("Peringatan", result.message, null, null);
+                                    } else {
+                                        root.snackbarRef.show(`Ruangan "${item.nama}" berhasil dihapus.`);
+                                    }
+                                }, () => {});
+                                // qmllint enable unqualified
+                            }
                         }
                     }
                 }
             }
-        }
-    }
-
-    ListModel {
-        id: productModel
-
-        ListElement {
-            productName: "Mata Kuliah 1"
-            productDescription: "Dosen 1"
-        }
-        ListElement {
-            productName: "Mata Kuliah 2"
-            productDescription: "Dosen 2"
-        }
-        ListElement {
-            productName: "Mata Kuliah 3"
-            productDescription: "Dosen 3"
-        }
-        ListElement {
-            productName: "Mata Kuliah 4"
-            productDescription: "Dosen 4"
-        }
-        ListElement {
-            productName: "Mata Kuliah 5"
-            productDescription: "Dosen 5"
-        }
-        ListElement {
-            productName: "Mata Kuliah 6"
-            productDescription: "Dosen 6"
-        }
-        ListElement {
-            productName: "Mata Kuliah 7"
-            productDescription: "Dosen 7"
-        }
-        ListElement {
-            productName: "Mata Kuliah 8"
-            productDescription: "Dosen 8"
-        }
-        ListElement {
-            productName: "Mata Kuliah 9"
-            productDescription: "Dosen 9"
-        }
-        ListElement {
-            productName: "Mata Kuliah 10"
-            productDescription: "Dosen 10"
-        }
-        ListElement {
-            productName: "Mata Kuliah 11"
-            productDescription: "Dosen 11"
         }
     }
 }

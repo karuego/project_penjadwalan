@@ -20,6 +20,11 @@ Page {
     property var pengajarModelRef: contextBridgeRef.pengajarModel
     property var matakuliahModelRef: contextBridgeRef.matakuliahModel
 
+    property string action: "add"
+    property int matakuliahId: -1
+    property bool isEdit: true
+    property string tipeMatakuliah
+
     ColumnLayout {
         spacing: 10
         anchors.fill: parent
@@ -95,17 +100,6 @@ Page {
             }
         }
 
-        TextField {
-            id: textFieldJumlahSesi
-            visible: false
-            placeholderText: qsTr("Jumlah Sesi Praktikum")
-            background.implicitHeight: 50
-            background.implicitWidth: 250
-            validator: RegularExpressionValidator {
-                regularExpression: /^[0-9]*$/
-            }
-        }
-
         // qmllint disable
         SortFilterProxyModel {
             id: proxyFilterDosen
@@ -147,6 +141,8 @@ Page {
         // qmllint enable
 
         RowLayout {
+            id: rowDosen
+
             Label {
                 text: qsTr("Dosen Pengampu :")
             }
@@ -154,7 +150,6 @@ Page {
             ComboBox {
                 id: comboBoxDosen
                 Layout.preferredWidth: 300
-                editable: true
                 model: proxyFilterDosen
                 textRole: "nama"
                 valueRole: "id_"
@@ -166,6 +161,7 @@ Page {
         }
 
         RowLayout {
+            id: rowAsdos
             visible: radioPraktek.checked
 
             Label {
@@ -175,7 +171,6 @@ Page {
             ComboBox {
                 id: comboBoxAsdos
                 Layout.preferredWidth: 300
-                editable: true
                 model: proxyFilterAsdos
                 textRole: "nama"
                 valueRole: "id_"
@@ -187,28 +182,29 @@ Page {
         }
 
         Button {
-            text: qsTr("Simpan")
+            text: root.action == 'edit' ? qsTr("Perbarui") : qsTr("Simpan")
             hoverEnabled: true
             ToolTip.delay: 300
             ToolTip.timeout: 5000
             ToolTip.visible: hovered
-            ToolTip.text: qsTr("This tool tip is shown after hovering the button for a second.")
+            ToolTip.text: qsTr("Menyimpan data mata kuliah ke database")
 
             onClicked: {
                 const nama = textFieldNama.text.trim();
                 const tipe = radioTeori.checked ? "teori" : radioPraktek.checked ? "praktek" : "unknown";
                 const sks = textFieldSks.text
                 const semester = textFieldSemester.text
-                const kelas = textFieldJumlahKelas
-                const sesi = textFieldJumlahSesi
+                const kelas = textFieldJumlahKelas.text
                 const dosenId = comboBoxDosen.currentValue
                 const asdosId = comboBoxAsdos.currentValue
 
+                const pengampuId = tipe === "teori" ? dosenId : asdosId;
+
                 let result = null;
                 if (root.action === "edit") {
-                    result = root.pengajarModelRef.update(old_id, idn, nama, tipe, waktu);
+                    result = root.matakuliahModelRef.update(root.matakuliahId, nama, semester, kelas, pengampuId);
                 } else {
-                    result = root.pengajarModelRef.add(idn, nama, tipe, waktu);
+                    result = root.matakuliahModelRef.add(nama, tipe, sks, semester, kelas, dosenId, asdosId);
                 }
 
                 if (result.success) {
@@ -222,6 +218,57 @@ Page {
     }
 
     Component.onCompleted: {
-        radioTeori.checked = true;
+        if (action == "view") {
+            root.title = "Detail Pengajar";
+            isEdit = false;
+        } else if (action == "edit")
+            root.title = "Edit Pengajar";
+        else
+            return;
+
+        textFieldNama.readOnly = true;
+        textFieldSks.readOnly = true;
+        radioTeori.enabled = false;
+        radioPraktek.enabled = false;
+
+        // const pengajar = contextBridgeRef.getPengajarFromProxyIndex(pengajarId);
+        // const pengajar = contextBridgeRef.pengajarModel.getById(pengajarId);
+        const matkul = root.matakuliahModelRef.getById(root.matakuliahId);
+
+        if (!matkul) {
+            console.log('Mata Kuliah tidak ditemukan');
+            root.snackbarRef.showLong("Error: Mata Kuliah tidak ditemukan.", ()=>{});
+            return;
+        }
+
+        if (matkul.nama)
+            textFieldNama.text = matkul.nama;
+
+        if (matkul.tipe) {
+            root.tipeMatakuliah = matkul.tipe;
+            radioPraktek.text = "Praktikum";
+
+            if (matkul.tipe === "teori") {
+                radioTeori.checked = true;
+
+                rowDosen.visible = true;
+                rowAsdos.visible = false;
+                comboBoxDosen.currentValue = matkul.pengampu.id;
+            } else if (matkul.tipe === "praktek") {
+                radioPraktek.checked = true;
+
+                rowDosen.visible = false;
+                rowAsdos.visible = true;
+                comboBoxAsdos.currentValue = matkul.pengampu.id;
+            }
+            // tipeField.currentIndex = tipeField.model.indexOf(pengajar.tipe);
+        }
+
+        if (matkul.sks)
+            textFieldSks.text = matkul.sks;
+        if (matkul.semester)
+            textFieldSemester.text = matkul.semester;
+        if (matkul.kelas)
+            textFieldJumlahKelas.text = matkul.kelas;
     }
 }

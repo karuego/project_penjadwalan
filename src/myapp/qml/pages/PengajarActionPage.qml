@@ -289,7 +289,8 @@ Page {
                 }
 
                 if (result.success) {
-                    root.snackbarRef.showLong("Data pengajar berhasil disimpan.", ()=>{});
+                    const message = root.action == 'edit' ? "Data pengajar berhasil diperbarui." : "Data pengajar berhasil disimpan.";
+                    root.snackbarRef.showLong(message, ()=>{});
                     root.stackViewRef.pop();
                 } else {
                     root.snackbarRef.showLong(`Gagal menyimpan data pengajar: ${result.message}`, ()=>{});
