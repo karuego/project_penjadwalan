@@ -79,7 +79,6 @@ Page {
                 text: "Buat Jadwal"
                 Layout.fillWidth: true
                 onClicked: {
-                    console.log(root.isLoading)
                     if (!isLoading) timer.start(), busyIndicator.running = true;
                     else timer.stop(), busyIndicator.running = false;
                     root.isLoading = !root.isLoading;
@@ -129,7 +128,7 @@ Page {
                     text: "Lihat Jadwal Teori"
                     Layout.fillWidth: true
                     enabled: false
-                    onClicked: root.stackViewRef.push("JadwalTeoriPage.qml")
+                    onClicked: root.gotoActionPage("teori")
                 }
 
                 Button {
@@ -137,7 +136,7 @@ Page {
                     text: "Lihat Jadwal Praktek"
                     Layout.fillWidth: true
                     enabled: false
-                    onClicked: root.stackViewRef.push("JadwalPraktekPage.qml")
+                    onClicked: root.gotoActionPage("praktek")
                 }
             }
         }
@@ -179,6 +178,12 @@ Page {
         Item {
             Layout.fillHeight: true
         }
+    }
+
+    function gotoActionPage(type) {
+        root.stackViewRef.push("JadwalActionPage.qml", {
+            type: type
+        });
     }
 
     Component.onCompleted: {

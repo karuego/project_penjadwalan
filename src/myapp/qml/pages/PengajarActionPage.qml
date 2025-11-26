@@ -17,12 +17,6 @@ Page {
     property CustomDialog alertDialogRef
     property Snackbar snackbarRef
 
-    readonly property size textFieldSize: Qt.size(250, 50)
-    readonly property size buttonSize: Qt.size(120, 50)
-
-    property string action: "add"
-    property string pengajarId: "-1"
-
     property var contextBridgeRef: contextBridge // qmllint disable unqualified
     property var pengajarModelRef: contextBridgeRef.pengajarModel
 
@@ -31,8 +25,14 @@ Page {
     // Properti untuk menyimpan daftar hari yang TERSEDIA untuk dipilih
     property variant availableDays: []
 
+    property string action: "add"
+    property string pengajarId: "-1"
+
     property bool isEdit: true
     property string tipePengajar
+
+    readonly property size textFieldSize: Qt.size(250, 50)
+    readonly property size buttonSize: Qt.size(120, 50)
 
     ColumnLayout {
         spacing: 8
