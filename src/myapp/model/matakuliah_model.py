@@ -14,12 +14,12 @@ from PySide6.QtCore import (
     Slot,
 )
 from .pengajar_model import PengajarModel
-from utils import ( # pyright: ignore[reportImplicitRelativeImport]
+from myapp.utils import (
     Database,
     MataKuliah,
     Pengajar,
 )
-import log # pyright: ignore[reportImplicitRelativeImport]
+import myapp.log
 
 
 class MataKuliahModel(QAbstractListModel):

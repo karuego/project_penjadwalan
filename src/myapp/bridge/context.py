@@ -1,11 +1,3 @@
-from model import (  # pyright: ignore[reportImplicitRelativeImport]
-    MataKuliahModel,
-    PengajarModel,
-    PengajarProxyModel,
-    RuanganModel,
-    WaktuModel,
-    WaktuProxyModel,
-)
 from PySide6.QtCore import (
     Property,
     QObject,
@@ -14,7 +6,15 @@ from PySide6.QtCore import (
     Signal,
     Slot,
 )
-from utils import (  # pyright: ignore[reportImplicitRelativeImport]
+from myapp.model import (
+    MataKuliahModel,
+    PengajarModel,
+    PengajarProxyModel,
+    RuanganModel,
+    WaktuModel,
+    WaktuProxyModel,
+)
+from myapp.utils import (
     Database,
     Hari,
     Pengajar,

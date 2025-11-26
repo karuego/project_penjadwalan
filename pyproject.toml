@@ -25,13 +25,13 @@ hooks-enabled = true
 sources = ["src"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["myapp"]
+packages = ["src/myapp"]
 
 [tool.hatch.build.targets.wheel.shared-data]
 "src/myapp/assets" = "myapp/assets"
 
 [dependency-groups]
 dev = [
-    "pylyzer>=0.0.82",
+    "hatchling>=1.27.0",
     "ruff>=0.14.1",
 ]

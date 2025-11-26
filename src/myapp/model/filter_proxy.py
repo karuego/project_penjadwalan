@@ -5,7 +5,7 @@ from PySide6.QtCore import (
     QPersistentModelIndex,
     QSortFilterProxyModel,
 )
-from . import PengajarModel
+from .pengajar_model import PengajarModel
 
 
 class FilterProxyModel(QSortFilterProxyModel):

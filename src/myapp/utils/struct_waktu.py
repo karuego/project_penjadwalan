@@ -1,7 +1,7 @@
 from typing import override
 from PySide6.QtCore import QObject, Property
-from .hari import Hari
 
+from .hari import Hari
 
 class TimeSlot(QObject):
     def __init__(

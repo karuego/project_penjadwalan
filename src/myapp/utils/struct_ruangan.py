@@ -1,11 +1,12 @@
-from typing import Iterator, override
+from typing import override
+from collections.abc import Iterator
 from PySide6.QtCore import QObject, Property
 
 
 class Ruangan(QObject):
     def __init__(
         self,
-        id: int = "",
+        id: int = 0,
         nama: str = "",
         tipe: str = "",
         parent: QObject | None = None,

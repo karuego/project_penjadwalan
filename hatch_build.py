@@ -1,11 +1,13 @@
 import os
 import subprocess
 from pathlib import Path
+from typing import override, Any
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
-class CustomBuildHook(BuildHookInterface):
-    def initialize(self, version, build_data):
+class CustomBuildHook(BuildHookInterface): # pyright: ignore[reportMissingTypeArgument]
+    @override
+    def initialize(self, version: str, build_data: dict[str, Any]): # pyright: ignore[reportExplicitAny]
         """
         Metode ini dijalankan sebelum proses build dimulai.
         """
@@ -20,7 +22,7 @@ class CustomBuildHook(BuildHookInterface):
             print(f"  -> Mengompilasi {qrc_file} ke {output_file}")
 
             try:
-                subprocess.run(
+                _ = subprocess.run(
                     ["pyside6-rcc", str(qrc_file), "-o", str(output_file)],
                     check=True,
                     capture_output=True,
@@ -28,7 +30,7 @@ class CustomBuildHook(BuildHookInterface):
                 )
             except subprocess.CalledProcessError as e:
                 print(f"ERROR: Gagal mengompilasi {qrc_file}")
-                print(e.stderr)
+                print(e.stderr) # pyright: ignore[reportAny]
                 raise
 
             # Paksa Hatch untuk menyertakan file .py yang baru dibuat

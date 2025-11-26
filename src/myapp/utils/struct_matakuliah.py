@@ -2,6 +2,7 @@ from enum import Enum
 from typing import override
 from collections.abc import Iterator
 from PySide6.QtCore import QObject, Property
+
 from .struct_pengajar import Pengajar
 
 TIPE_MATAKULIAH: list[str] = ["teori", "praktek"]

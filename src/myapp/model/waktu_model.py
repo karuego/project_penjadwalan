@@ -13,7 +13,7 @@ from PySide6.QtCore import (
     QPersistentModelIndex,
 )
 
-from utils import (  # pyright: ignore[reportImplicitRelativeImport]
+from myapp.utils import (
     TimeSlot,
     Database,
     TimeSlotManager,

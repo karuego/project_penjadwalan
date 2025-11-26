@@ -14,8 +14,8 @@ from PySide6.QtCore import (
     Qt,
     Slot,
 )
-from utils.database import Database # pyright: ignore[reportImplicitRelativeImport]
-from utils.struct_pengajar import Pengajar # pyright: ignore[reportImplicitRelativeImport]
+from myapp.utils.database import Database
+from myapp.utils.struct_pengajar import Pengajar
 
 
 class PengajarModel(QAbstractListModel):

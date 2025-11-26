@@ -1,6 +1,7 @@
 import typing
 import sqlite3
 from datetime import datetime
+
 from .database import Database
 from .hari import Hari
 from .struct_waktu import TimeSlot

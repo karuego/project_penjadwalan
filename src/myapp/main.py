@@ -5,10 +5,11 @@ import signal
 import sys
 from pathlib import Path
 
-from bridge import ContextBridge  # pyright: ignore[reportImplicitRelativeImport]
 from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtQml import QQmlApplicationEngine, QQmlError, qmlRegisterType
-from utils import (  # pyright: ignore[reportImplicitRelativeImport]
+
+from myapp.bridge import ContextBridge
+from myapp.utils import (
     TimeSlot,
     Database,
     TimeSlotManager,
@@ -42,6 +43,16 @@ def on_qml_warning(errors: list[QQmlError]) -> None:
 
 
 def run() -> None:
+    db = Database()
+    # timeslot_manager: TimeSlotManager = TimeSlotManager(db)
+    # schedule_generator: ScheduleGenerator = ScheduleGenerator(
+    #     timeslot_manager
+    # )
+    if not db.is_exist():
+        db.init_database()
+        # # total_generated, results = schedule_generator.generate_schedule()
+        # _ = schedule_generator.generate_schedule()
+
     app = QGuiApplication(sys.argv)
     # app.setWindowIcon(
     #     QIcon(
@@ -84,14 +95,4 @@ def run() -> None:
 
 
 if __name__ == "__main__":
-    db = Database()
-    # timeslot_manager: TimeSlotManager = TimeSlotManager(db)
-    # schedule_generator: ScheduleGenerator = ScheduleGenerator(
-    #     timeslot_manager
-    # )
-    if not db.is_exist():
-        db.init_database()
-        # # total_generated, results = schedule_generator.generate_schedule()
-        # _ = schedule_generator.generate_schedule()
-
     run()

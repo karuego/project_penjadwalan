@@ -12,5 +12,13 @@
             "name": "project_penjadwalan",
             "database": "database.sqlite3.db"
         }
+    ],
+    "qt.qml.importPaths": [
+        "./src",
+        "${workspaceFolder}/src"
+    ],
+
+    "qml.importPaths": [
+        "./src"
     ]
 }

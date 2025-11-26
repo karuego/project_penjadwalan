@@ -12,9 +12,9 @@ from PySide6.QtCore import (
     Qt,
     Slot,
 )
-from utils.database import Database  # pyright: ignore[reportImplicitRelativeImport]
-from utils.struct_ruangan import Ruangan  # pyright: ignore[reportImplicitRelativeImport]
-import log # pyright: ignore[reportImplicitRelativeImport]
+from myapp.utils.database import Database
+from myapp.utils.struct_ruangan import Ruangan
+import myapp.log
 
 
 class RuanganModel(QAbstractListModel):
