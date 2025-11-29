@@ -337,7 +337,7 @@ Page {
                                     Layout.alignment: Qt.AlignRight
                                     Layout.rightMargin: 25
 
-                                    IconButton {
+                                    /*IconButton {
                                         iconName: "visibility"
                                         iconColor: "#78A75A"
                                         // tooltipText: "Edit"
@@ -345,7 +345,7 @@ Page {
                                         onClicked: {
                                             root.gotoActionPage("view", item.id_); // qmllint disable unqualified
                                         }
-                                    }
+                                    }*/
 
                                     IconButton {
                                         iconName: "edit"

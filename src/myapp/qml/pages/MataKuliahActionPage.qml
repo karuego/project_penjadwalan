@@ -208,10 +208,10 @@ Page {
                 }
 
                 if (result.success) {
-                    root.snackbarRef.showLong("Data pengajar berhasil disimpan.", ()=>{});
+                    root.snackbarRef.showLong("Data mata kuliah berhasil disimpan.", ()=>{});
                     root.stackViewRef.pop();
                 } else {
-                    root.snackbarRef.showLong(`Gagal menyimpan data pengajar: ${result.message}`, ()=>{});
+                    root.snackbarRef.showLong(`Gagal menyimpan data mata kuliah: ${result.message}`, ()=>{});
                 }
             }
         }

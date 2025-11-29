@@ -14,7 +14,7 @@ from PySide6.QtCore import (
 )
 from myapp.utils.database import Database
 from myapp.utils.struct_ruangan import Ruangan
-import myapp.log
+from myapp import log
 
 
 class RuanganModel(QAbstractListModel):

@@ -45,7 +45,12 @@ class Database:
                 CREATE TABLE mata_kuliah (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     nama TEXT NOT NULL,
-                    semester INTEGER NOT NULL
+                    jenis TEXT NOT NULL,
+                    sks INTEGER NOT NULL,
+                    semester INTEGER NOT NULL,
+                    jumlah_kelas INTEGER NOT NULL,
+                    pengajar_id TEXT,
+                    FOREIGN KEY (pengajar_id) REFERENCES pengajar(id)
                 )
             """)
 

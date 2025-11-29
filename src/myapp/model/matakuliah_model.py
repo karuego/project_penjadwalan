@@ -19,7 +19,7 @@ from myapp.utils import (
     MataKuliah,
     Pengajar,
 )
-import myapp.log
+from myapp import log
 
 
 class MataKuliahModel(QAbstractListModel):
