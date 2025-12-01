@@ -200,7 +200,7 @@ class JadwalModel(QAbstractTableModel):
 
         v6.load_data()
 
-        self.worker = OptimizationWorker(max_iter=5000)
+        self.worker = OptimizationWorker(max_iter=10000)
         self.worker_thread = QThread()
         self.worker.moveToThread(self.worker_thread)
 

@@ -58,29 +58,29 @@ Page {
         }
 
         // --- BAGIAN KONTROL ---
-        RowLayout {
-            Layout.fillWidth: true
-            Label {
-                text: "Periode akademik :"
-                font.pixelSize: 15
-            }
-            ComboBox {
-                id: comboBoxPeriode
-                Layout.fillWidth: true
-                model: ListModel {
-                    ListElement {
-                        text: qsTr("Gasal")
-                        value: "gasal"
-                    }
-                    ListElement {
-                        text: qsTr("Genap")
-                        value: "genap"
-                    }
-                }
-                textRole: "text"
-                valueRole: "value"
-            }
-        }
+        // RowLayout {
+        //     Layout.fillWidth: true
+        //     Label {
+        //         text: "Periode akademik :"
+        //         font.pixelSize: 15
+        //     }
+        //     ComboBox {
+        //         id: comboBoxPeriode
+        //         Layout.fillWidth: true
+        //         model: ListModel {
+        //             ListElement {
+        //                 text: qsTr("Gasal")
+        //                 value: "gasal"
+        //             }
+        //             ListElement {
+        //                 text: qsTr("Genap")
+        //                 value: "genap"
+        //             }
+        //         }
+        //         textRole: "text"
+        //         valueRole: "value"
+        //     }
+        // }
 
         RowLayout {
             Layout.fillWidth: true
