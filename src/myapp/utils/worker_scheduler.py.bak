@@ -1,0 +1,46 @@
+from PySide6.QtCore import QObject, Signal, QThread
+
+# Import struct dan logika
+from .struct_jadwal import Jadwal
+from . import sa as v6  # Asumsi file algoritma bernama v6.py
+
+
+class OptimizationWorker(QObject):
+    # Signals untuk komunikasi ke GUI
+    finished: Signal = Signal(list, float)  # Mengirim (List[Jadwal], Final Cost)
+    progress: Signal = Signal(int, float)  # Mengirim (Iterasi Saat Ini, Cost Saat Ini)
+    error: Signal = Signal(str)  # Jika ada error
+
+    def __init__(self, max_iter: int = 5000):
+        super().__init__()
+        self.max_iter: int = max_iter
+        self._is_running: bool = True  # Flag untuk stop paksa (opsional)
+
+    def run(self):
+        """Fungsi ini akan berjalan di Thread terpisah"""
+        try:
+            # Pastikan data termuat (jika belum diload di main)
+            # v6.load_data()
+
+            # Definisi fungsi callback kecil untuk menjembatani v6 -> Signal
+            def on_progress(iteration: int, current_cost: float):
+                if self._is_running:
+                    self.progress.emit(iteration, current_cost)
+
+            # Jalankan Algoritma
+            raw_schedule, final_cost = v6.simulated_annealing(
+                max_iter=self.max_iter, progress_callback=on_progress
+            )
+
+            # Konversi hasil raw (ScheduleItem) ke Struct Jadwal (QObject)
+            # Menggunakan fungsi helper yang kita bahas sebelumnya
+            final_structs: list[Jadwal] = v6.convert_to_struct_objects(raw_schedule)
+
+            # Kirim hasil akhir ke GUI
+            self.finished.emit(final_structs, final_cost)
+
+        except Exception as e:
+            self.error.emit(str(e))
+
+    def stop(self):
+        self._is_running = False

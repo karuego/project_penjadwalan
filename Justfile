@@ -5,16 +5,16 @@
 run: py
 
 py:
-	uv run src/myapp/main.py
+	uv run myapp
 
 watch:
-	@watchexec -w src/myapp -r -- uv run src/myapp/main.py
+	@watchexec -w src/myapp -r -- uv run myapp
 
 py-watch:
-	@watchexec -w src/myapp -r -- uv run src/myapp/main.py
+	@watchexec -w src/myapp -r -- uv run myapp
 
 debug:
-	@uv run python -i src/myapp/main.py
+	@uv run python -m myapp
 
 qt:
 	@qml6 -I src/myapp/qml "src/myapp/qml/Main.qml"

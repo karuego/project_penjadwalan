@@ -8,7 +8,7 @@ from pathlib import Path
 from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtQml import QQmlApplicationEngine, QQmlError, qmlRegisterType
 
-from myapp.bridge import ContextBridge
+from myapp.context import ContextBridge
 from myapp.utils import (
     TimeSlot,
     Database,

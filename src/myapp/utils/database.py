@@ -1,14 +1,17 @@
 import os
 import sqlite3
 from result import Result, Ok, Err
+from maybe import Maybe, Some, Nothing
 
 # from .schedule_generator import ScheduleGenerator
 # from .waktu_util import TimeSlotManager
 from .struct_pengajar import Pengajar
 from .struct_matakuliah import MataKuliah
 from .struct_ruangan import Ruangan
+from .struct_jadwal import Jadwal
 
 DB_FILE: str = "database.sqlite3.db"
+
 
 class Database:
     def __init__(self) -> None:
@@ -23,82 +26,66 @@ class Database:
 
             # Tabel untuk menyimpan timeslots
             _ = cursor.execute("""
-                CREATE TABLE IF NOT EXISTS timeslots (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    hari INTEGER NOT NULL,
-                    mulai TEXT NOT NULL,
-                    selesai TEXT NOT NULL,
+                CREATE TABLE timeslots (
+                    id      INTEGER PRIMARY KEY,
+                    hari    INTEGER NOT NULL,
+                    mulai   TEXT    NOT NULL,
+                    selesai TEXT    NOT NULL,
+
                     UNIQUE(hari, mulai, selesai)
                 )
             """)
 
             _ = cursor.execute("""
                 CREATE TABLE pengajar (
-                    id TEXT PRIMARY KEY NOT NULL,
-                    nama TEXT NOT NULL,
-                    jenis TEXT NOT NULL DEFAULT 'dosen',
-                    preferensi_waktu TEXT
-                )
-            """)
-
-            _ = cursor.execute("""
-                CREATE TABLE mata_kuliah (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    nama TEXT NOT NULL,
-                    jenis TEXT NOT NULL,
-                    sks INTEGER NOT NULL,
-                    semester INTEGER NOT NULL,
-                    jumlah_kelas INTEGER NOT NULL,
-                    pengajar_id TEXT,
-                    FOREIGN KEY (pengajar_id) REFERENCES pengajar(id)
+                    id                  TEXT PRIMARY KEY,
+                    nama                TEXT NOT NULL,
+                    jenis               TEXT NOT NULL DEFAULT 'dosen', -- jenis: 'dosen', 'asdos'
+                    preferensi_waktu    TEXT
                 )
             """)
 
             _ = cursor.execute("""
                 CREATE TABLE ruangan (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    nama TEXT NOT NULL UNIQUE,
-                    jenis TEXT NOT NULL DEFAULT 'teori'
+                    id      INTEGER PRIMARY KEY AUTOINCREMENT,
+                    nama    TEXT    NOT NULL UNIQUE,
+                    jenis   TEXT    NOT NULL DEFAULT 'teori', -- jenis: 'teori', 'praktek'
+
+                    UNIQUE(nama, jenis)
                 )
             """)
 
             _ = cursor.execute("""
-                CREATE TABLE komponen_mk (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    mata_kuliah_id INTEGER NOT NULL,
-                    nama_komponen TEXT NOT NULL,
-                    durasi_blok INTEGER NOT NULL,
-                    jenis TEXT NOT NULL DEFAULT 'teori',
-                    jumlah_kelas INTEGER NOT NULL,
-                    jumlah_sesi_praktikum INTEGER NOT NULL DEFAULT 1,
-                    FOREIGN KEY (mata_kuliah_id) REFERENCES mata_kuliah(id)
-                )
-            """)
+                CREATE TABLE mata_kuliah (
+                    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                    nama            TEXT    NOT NULL, -- Misal: 'Teori Basis Data', 'Praktikum Basis Data'
+                    jenis           TEXT    NOT NULL    DEFAULT 'teori', -- 'teori' atau 'praktek'
+                    sks             INTEGER NOT NULL, -- Jumlah blok 45 menit
+                    semester        INTEGER NOT NULL,
+                    jumlah_kelas    INTEGER NOT NULL,
+                    pengajar_id     TEXT,
 
-            _ = cursor.execute("""
-                CREATE TABLE pengampu (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    pengajar_id INTEGER,
-                    komponen_mk_id INTEGER NOT NULL,
-                    FOREIGN KEY (pengajar_id) REFERENCES pengajar(id),
-                    FOREIGN KEY (komponen_mk_id) REFERENCES komponen_mk(id)
+                    FOREIGN KEY (pengajar_id) REFERENCES pengajar(id)
                 )
             """)
 
             _ = cursor.execute("""
                 CREATE TABLE jadwal (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    komponen_mk_id INTEGER NOT NULL,
-                    pengajar_id INTEGER NOT NULL,
-                    kelas CHAR NOT NULL,
-                    sesi_ke INTEGER NOT NULL,
-                    waktu_id_start INTEGER NOT NULL,
-                    durasi_blok INTEGER NOT NULL,
-                    ruangan_id INTEGER NULL,
-                    daring BOOLEAN NOT NULL DEFAULT FALSE,
-                    FOREIGN KEY (komponen_mk_id) REFERENCES komponen_mk(id),
-                    FOREIGN KEY (pengajar_id) REFERENCES pengajar(id),
-                    FOREIGN KEY (waktu_id_start) REFERENCES waktu(id)
+                    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                    hari            TEXT    NOT NULL,
+                    jam             TEXT    NOT NULL,
+
+                    matakuliah      TEXT    NOT NULL,
+                    jenis           TEXT    NOT NULL, -- 'teori' atau 'praktek'
+
+                    sks             INTEGER NOT NULL,
+                    semester        INTEGER NOT NULL,
+
+                    kelas           CHAR    NOT NULL,
+                    ruangan         TEXT    NOT NULL,
+                    daring          BOOLEAN NOT NULL    DEFAULT FALSE, -- True jika online
+
+                    pengajar        TEXT    NOT NULL
                 )
             """)
 
@@ -112,6 +99,7 @@ class Database:
         """Cek apakah file database sudah ada"""
         return os.path.exists(DB_FILE)
 
+    # Tabel Pengajar
     def get_all_pengajar(self) -> list[Pengajar]:
         """Mendapatkan semua pengajar dari database"""
         with self.get_connection() as conn:
@@ -142,7 +130,7 @@ class Database:
                 (id,),
             )
 
-            res: tuple[str, str, str, str] | None = cursor.fetchone() # pyright: ignore[reportAny]
+            res: tuple[str, str, str, str] | None = cursor.fetchone()  # pyright: ignore[reportAny]
             if not res:
                 return Err("Pengajar tidak ditemukan")
 
@@ -173,7 +161,7 @@ class Database:
         except sqlite3.Error as e:
             return Err(f"Database error: {str(e)}")
         except Exception as e:
-            return Err(f"Error: {str(e)}")
+            return Err(f"Python Error: {str(e)}")
 
     def update_pengajar(self, id: str, pengajar: Pengajar) -> Result[str, str]:
         """memperbarui data pengajar"""
@@ -203,7 +191,7 @@ class Database:
                         pengajar.getTipe(),
                         pengajar.getWaktu(),
                         id,
-                    )
+                    ),
                 )
 
                 conn.commit()
@@ -213,7 +201,7 @@ class Database:
         except sqlite3.Error as e:
             return Err(f"Database error: {str(e)}")
         except Exception as e:
-            return Err(f"Error: {str(e)}")
+            return Err(f"Python Error: {str(e)}")
 
     def clear_all_pengajar(self) -> Result[str, str]:
         """Menghapus semua pengajar"""
@@ -227,15 +215,20 @@ class Database:
         except sqlite3.Error as e:
             return Err(f"Database error: {str(e)}")
         except Exception as e:
-            return Err(f"Error: {str(e)}")
+            return Err(f"Python Error: {str(e)}")
 
+    # Tabel Mata Kuliah
     def get_all_matakuliah(self) -> list[MataKuliah]:
         """Mendapatkan semua mata kuliah dari database"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
 
-            _ = cursor.execute("SELECT id, nama, jenis, sks, semester, jumlah_kelas, pengajar_id FROM mata_kuliah ORDER BY nama")
-            res: list[tuple[int, str, str, int, int, int, str]] | None = cursor.fetchall()
+            _ = cursor.execute(
+                "SELECT id, nama, jenis, sks, semester, jumlah_kelas, pengajar_id FROM mata_kuliah ORDER BY nama"
+            )
+            res: list[tuple[int, str, str, int, int, int, str]] | None = (
+                cursor.fetchall()
+            )
             if not res:
                 return []
 
@@ -246,7 +239,15 @@ class Database:
                     continue
                 pengajar: Pengajar = pengajar_res.unwrap()
                 matkul.append(
-                    MataKuliah(id=item[0], nama=item[1], tipe=item[2], sks=item[3], semester=item[4], kelas=item[5], pengampu=pengajar)
+                    MataKuliah(
+                        id=item[0],
+                        nama=item[1],
+                        tipe=item[2],
+                        sks=item[3],
+                        semester=item[4],
+                        kelas=item[5],
+                        pengampu=pengajar,
+                    )
                 )
             return matkul
 
@@ -263,7 +264,7 @@ class Database:
                 (id,),
             )
 
-            res: tuple[int, str, str, int, int, int, str] | None = cursor.fetchone() # pyright: ignore[reportAny]
+            res: tuple[int, str, str, int, int, int, str] | None = cursor.fetchone()  # pyright: ignore[reportAny]
             if not res:
                 return Err("Pengajar tidak ditemukan")
 
@@ -273,7 +274,17 @@ class Database:
 
             pengajar: Pengajar = pengajar_res.unwrap()
 
-            return Ok(MataKuliah(id=res[0], nama=res[1], tipe=res[2], sks=res[3], semester=res[4], kelas=res[5], pengampu=pengajar))
+            return Ok(
+                MataKuliah(
+                    id=res[0],
+                    nama=res[1],
+                    tipe=res[2],
+                    sks=res[3],
+                    semester=res[4],
+                    kelas=res[5],
+                    pengampu=pengajar,
+                )
+            )
 
     def delete_matakuliah(self, id: int) -> Result[str, str]:
         """Menghapus data mata kuliah"""
@@ -298,7 +309,7 @@ class Database:
         except sqlite3.Error as e:
             return Err(f"Database error: {str(e)}")
         except Exception as e:
-            return Err(f"Error: {str(e)}")
+            return Err(f"Python Error: {str(e)}")
 
     def update_matakuliah(self, id: int, matkul: MataKuliah) -> Result[str, str]:
         """memperbarui data mata kuliah"""
@@ -325,9 +336,9 @@ class Database:
                         matkul.getNama(),
                         matkul.getSemester(),
                         matkul.getKelas(),
-                        matkul.getPengampu().getId(), # pyright: ignore[reportOptionalMemberAccess]
+                        matkul.getPengampu().getId(),  # pyright: ignore[reportOptionalMemberAccess]
                         id,
-                    )
+                    ),
                 )
 
                 conn.commit()
@@ -337,7 +348,7 @@ class Database:
         except sqlite3.Error as e:
             return Err(f"Database error: {str(e)}")
         except Exception as e:
-            return Err(f"Error: {str(e)}")
+            return Err(f"Python Error: {str(e)}")
 
     def clear_all_matakuliah(self) -> Result[str, str]:
         """Menghapus semua mata kuliah"""
@@ -351,8 +362,156 @@ class Database:
         except sqlite3.Error as e:
             return Err(f"Database error: {str(e)}")
         except Exception as e:
-            return Err(f"Error: {str(e)}")
+            return Err(f"Python Error: {str(e)}")
 
+    # Tabel Komponen Mata Kuliah
+    def get_all_komponen_mk(self) -> list[MataKuliah]:
+        """Mendapatkan semua mata kuliah dari database"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            _ = cursor.execute(
+                "SELECT id, nama, jenis, sks, semester, jumlah_kelas, pengajar_id FROM mata_kuliah ORDER BY nama"
+            )
+            res: list[tuple[int, str, str, int, int, int, str]] | None = (
+                cursor.fetchall()
+            )
+            if not res:
+                return []
+
+            matkul: list[MataKuliah] = []
+            for item in res:
+                pengajar_res: Result[Pengajar, str] = self.get_pengajar_by_id(item[6])
+                if pengajar_res.is_err():
+                    continue
+                pengajar: Pengajar = pengajar_res.unwrap()
+                matkul.append(
+                    MataKuliah(
+                        id=item[0],
+                        nama=item[1],
+                        tipe=item[2],
+                        sks=item[3],
+                        semester=item[4],
+                        kelas=item[5],
+                        pengampu=pengajar,
+                    )
+                )
+            return matkul
+
+    def get_komponen_mk_by_id(self, id: int) -> Result[MataKuliah, str]:
+        """Mendapatkan mata kuliah berdasarkan ID"""
+        with self.get_connection() as conn:
+            cursor: sqlite3.Cursor = conn.cursor()
+            _ = cursor.execute(
+                """
+                    SELECT id, nama, jenis, sks, semester, jumlah_kelas, pengajar_id
+                    FROM mata_kuliah
+                    WHERE id = ?
+                """,
+                (id,),
+            )
+
+            res: tuple[int, str, str, int, int, int, str] | None = cursor.fetchone()  # pyright: ignore[reportAny]
+            if not res:
+                return Err("Pengajar tidak ditemukan")
+
+            pengajar_res: Result[Pengajar, str] = self.get_pengajar_by_id(res[6])
+            if pengajar_res.is_err():
+                return Err("Gagal memproses")
+
+            pengajar: Pengajar = pengajar_res.unwrap()
+
+            return Ok(
+                MataKuliah(
+                    id=res[0],
+                    nama=res[1],
+                    tipe=res[2],
+                    sks=res[3],
+                    semester=res[4],
+                    kelas=res[5],
+                    pengampu=pengajar,
+                )
+            )
+
+    def delete_komponen_mk(self, id: int) -> Result[str, str]:
+        """Menghapus data mata kuliah"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+
+                _ = cursor.execute(
+                    "SELECT id, nama, jenis, sks, semester, jumlah_kelas, pengajar_id FROM mata_kuliah WHERE id = ?",
+                    (id,),
+                )
+
+                res: tuple[int, str, str, int, int, int, str] | None = cursor.fetchone()  # pyright: ignore[reportAny]
+                if not res:
+                    return Err("Mata Kuliah tidak ditemukan di database")
+
+                _ = cursor.execute("DELETE FROM mata_kuliah WHERE id = ?", (id,))
+                conn.commit()
+
+            return Ok("Mata Kuliah berhasil dihapus")
+
+        except sqlite3.Error as e:
+            return Err(f"Database error: {str(e)}")
+        except Exception as e:
+            return Err(f"Python Error: {str(e)}")
+
+    def update_komponen_mk(self, id: int, matkul: MataKuliah) -> Result[str, str]:
+        """memperbarui data mata kuliah"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+
+                _ = cursor.execute(
+                    "SELECT nama, semester, jumlah_kelas, pengajar_id FROM mata_kuliah WHERE id = ?",
+                    (id,),
+                )
+
+                res: tuple[str, int, int, str] | None = cursor.fetchone()  # pyright: ignore[reportAny]
+                if not res:
+                    return Err("Pengajar tidak ditemukan")
+
+                _ = cursor.execute(
+                    """
+                        UPDATE mata_kuliah
+                        SET nama = ?, semester = ?, jumlah_kelas = ?, pengajar_id = ?
+                        WHERE id = ?
+                    """,
+                    (
+                        matkul.getNama(),
+                        matkul.getSemester(),
+                        matkul.getKelas(),
+                        matkul.getPengampu().getId(),  # pyright: ignore[reportOptionalMemberAccess]
+                        id,
+                    ),
+                )
+
+                conn.commit()
+
+            return Ok("Mata kuliah berhasil diperbarui")
+
+        except sqlite3.Error as e:
+            return Err(f"Database error: {str(e)}")
+        except Exception as e:
+            return Err(f"Python Error: {str(e)}")
+
+    def clear_all_komponen_mk(self) -> Result[str, str]:
+        """Menghapus semua mata kuliah"""
+        try:
+            with self.get_connection() as conn:
+                cursor: sqlite3.Cursor = conn.cursor()
+                _ = cursor.execute("DELETE FROM mata_kuliah")
+                conn.commit()
+
+            return Ok("Semua mata kuliah berhasil dihapus")
+        except sqlite3.Error as e:
+            return Err(f"Database error: {str(e)}")
+        except Exception as e:
+            return Err(f"Python Error: {str(e)}")
+
+    # Tabel Ruangan
     def get_all_ruangan(self) -> list[Ruangan]:
         """Mendapatkan semua ruangan dari database"""
         with self.get_connection() as conn:
@@ -365,18 +524,18 @@ class Database:
 
             ruangan: list[Ruangan] = []
             for item in res:
-                ruangan.append(
-                    Ruangan(id=item[0], nama=item[1], tipe=item[2])
-                )
+                ruangan.append(Ruangan(id=item[0], nama=item[1], tipe=item[2]))
             return ruangan
 
     def get_ruangan_by_id(self, id: int) -> Result[Ruangan, str]:
         """Mendapatkan ruangan berdasarkan ID"""
         with self.get_connection() as conn:
             cursor: sqlite3.Cursor = conn.cursor()
-            _ = cursor.execute("SELECT id, nama, jenis FROM ruangan WHERE id = ?", (id,))
+            _ = cursor.execute(
+                "SELECT id, nama, jenis FROM ruangan WHERE id = ?", (id,)
+            )
 
-            res: tuple[int, str, str] | None = cursor.fetchone() # pyright: ignore[reportAny]
+            res: tuple[int, str, str] | None = cursor.fetchone()  # pyright: ignore[reportAny]
             if not res:
                 return Err("Ruangan tidak ditemukan")
 
@@ -387,7 +546,9 @@ class Database:
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
-                _ = cursor.execute("SELECT id, nama, jenis FROM ruangan WHERE id = ?", (id,))
+                _ = cursor.execute(
+                    "SELECT id, nama, jenis FROM ruangan WHERE id = ?", (id,)
+                )
 
                 res: tuple[int, str, str] | None = cursor.fetchone()  # pyright: ignore[reportAny]
                 if not res:
@@ -401,24 +562,25 @@ class Database:
         except sqlite3.Error as e:
             return Err(f"Database error: {str(e)}")
         except Exception as e:
-            return Err(f"Error tidak terduga: {str(e)}")
+            return Err(f"Python Error tidak terduga: {str(e)}")
 
     def update_ruangan(self, id: int, ruang: Ruangan) -> Result[str, str]:
         """memperbarui data ruangan"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
-                _ = cursor.execute("SELECT nama, jenis FROM ruangan WHERE id = ?", (id,))
+                _ = cursor.execute(
+                    "SELECT nama, jenis FROM ruangan WHERE id = ?", (id,)
+                )
 
                 res: tuple[str, str] | None = cursor.fetchone()  # pyright: ignore[reportAny]
                 if not res:
                     return Err("Ruangan tidak ditemukan")
 
-                _ = cursor.execute("UPDATE ruangan SET nama = ?, jenis = ? WHERE id = ?", (
-                    ruang.getNama(),
-                    ruang.getTipe(),
-                    id
-                ))
+                _ = cursor.execute(
+                    "UPDATE ruangan SET nama = ?, jenis = ? WHERE id = ?",
+                    (ruang.getNama(), ruang.getTipe(), id),
+                )
 
                 conn.commit()
 
@@ -427,7 +589,7 @@ class Database:
         except sqlite3.Error as e:
             return Err(f"Database error: {str(e)}")
         except Exception as e:
-            return Err(f"Error tidak terduga: {str(e)}")
+            return Err(f"Python Error tidak terduga: {str(e)}")
 
     def clear_all_ruangan(self) -> Result[str, str]:
         """Menghapus semua ruangan dari database"""
@@ -441,4 +603,135 @@ class Database:
         except sqlite3.Error as e:
             return Err(f"Database error: {str(e)}")
         except Exception as e:
-            return Err(f"Error tidak terduga: {str(e)}")
+            return Err(f"Python Error tidak terduga: {str(e)}")
+
+    # Tabel Jadwal
+    def get_all_jadwal(self) -> list[Jadwal]:
+        """Mendapatkan semua data jadwal dari database"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            _ = cursor.execute("""
+                SELECT id, hari, jam, matakuliah, jenis, sks, semester, kelas, ruangan, daring, pengajar
+                FROM jadwal ORDER BY matakuliah
+            """)
+            res: (
+                list[tuple[int, str, str, str, str, int, int, str, int, bool, str]]
+                | None
+            ) = cursor.fetchall()
+            if not res:
+                return []
+
+            jadwal: list[Jadwal] = []
+            for item in res:
+                jadwal.append(
+                    Jadwal(
+                        id=item[0],
+                        hari=item[1],
+                        jam=item[2],
+                        matakuliah=item[3],
+                        jenis=item[4],
+                        sks=item[5],
+                        semester=item[6],
+                        kelas=item[7],
+                        ruangan=item[8],
+                        daring=item[9],
+                        pengajar=item[10],
+                    )
+                )
+            return jadwal
+
+    def get_jadwal_by_id(self, id: int) -> Result[Jadwal, str]:
+        """Mendapatkan data jadwal berdasarkan ID di database"""
+        with self.get_connection() as conn:
+            cursor: sqlite3.Cursor = conn.cursor()
+            _ = cursor.execute(
+                """
+                    SELECT hari, jam, matakuliah, jenis, sks, semester, kelas, ruangan, daring, pengajar
+                    FROM jadwal WHERE id = ?
+                """,
+                (id,),
+            )
+
+            res: tuple[str, str, str, str, int, int, str, int, bool, str] | None = (
+                cursor.fetchone()
+            )  # pyright: ignore[reportAny]
+            if not res:
+                return Err("Entri Jadwal tidak ditemukan")
+
+            return Ok(
+                Jadwal(
+                    id=id,
+                    hari=res[0],
+                    jam=res[1],
+                    matakuliah=res[2],
+                    jenis=res[3],
+                    sks=res[4],
+                    semester=res[5],
+                    kelas=res[6],
+                    ruangan=res[7],
+                    daring=res[8],
+                    pengajar=res[9],
+                )
+            )
+
+    def delete_jadwal(self, id: int) -> Result[str, str]:
+        """Menghapus data jadwal dari database"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                _ = cursor.execute("SELECT id FROM jadwal WHERE id = ?", (id,))
+
+                res: int | None = cursor.fetchone()  # pyright: ignore[reportAny]
+                if not res:
+                    return Err("Entri Jadwal tidak ditemukan di database")
+
+                _ = cursor.execute("DELETE FROM jadwal WHERE id = ?", (id,))
+                conn.commit()
+
+            return Ok("Jadwal berhasil dihapus dari database")
+
+        except sqlite3.Error as e:
+            return Err(f"Database error: {str(e)}")
+        except Exception as e:
+            return Err(f"Python Error tidak terduga: {str(e)}")
+
+    # TODO:
+    # def update_jadwal(self, id: int, jadwal: Jadwal) -> Result[str, str]:
+    #     """memperbarui data jadwal"""
+    #     try:
+    #         with self.get_connection() as conn:
+    #             cursor = conn.cursor()
+    #             _ = cursor.execute("SELECT id FROM jadwal WHERE id = ?", (id,))
+
+    #             res: int | None = cursor.fetchone()  # pyright: ignore[reportAny]
+    #             if not res:
+    #                 return Err("Entri Jadwal tidak ditemukan di database")
+
+    #             _ = cursor.execute(
+    #                 "UPDATE jadwal SET nama = ?, jenis = ? WHERE id = ?",
+    #                 (ruang.getNama(), ruang.getTipe(), id),
+    #             )
+
+    #             conn.commit()
+
+    #         return Ok("Data ruangan berhasil diperbarui")
+
+    #     except sqlite3.Error as e:
+    #         return Err(f"Database error: {str(e)}")
+    #     except Exception as e:
+    #         return Err(f"Python Error tidak terduga: {str(e)}")
+
+    def clear_all_jadwal(self) -> Result[str, str]:
+        """Menghapus semua entry jadwal dari database"""
+        try:
+            with self.get_connection() as conn:
+                cursor: sqlite3.Cursor = conn.cursor()
+                _ = cursor.execute("DELETE FROM jadwal")
+                conn.commit()
+
+            return Ok("Semua entri jadwal telah dihapus")
+        except sqlite3.Error as e:
+            return Err(f"Database error: {str(e)}")
+        except Exception as e:
+            return Err(f"Python Error tidak terduga: {str(e)}")

@@ -1,0 +1,105 @@
+// Use DBML to define your database structure
+// Docs: https://dbml.dbdiagram.io/docs
+
+Project jadwal_sa {
+  database_type: 'SQLite'
+  Note: 'Penjadwalan mata kuliah menggunakan Simulated Annealing'
+}
+
+// Blok waktu 45 menit
+Table timeslots {
+  id integer [pk, increment]
+  hari integer [not null, note: '1: Senin, 2: Selasa, 3: Rabu, 4: Kamis, 5: Jumat, 6: Sabtu, 7: Minggu']
+  mulai text [not null, note: 'HH:MM']
+  selesai text [not null, note: 'HH:MM']
+
+  indexes {
+    (hari, mulai, selesai) [unique]
+  }
+}
+
+Table pengajar {
+  id text [pk, not null]
+  nama text [not null]
+  jenis text [not null, default: 'dosen', note: 'dosen / asdos']
+  preferensi_waktu text [note: 'comma-separated array of integers representing non-preferred days (1-7)']
+
+  // TODO: tambahkan Beban Pengajaran Tatap Muka
+}
+
+// Table preferensi_waktu {
+//   Note: 'Hapus semua preferensi waktu dari seorang pengajar apabila pengajar tersebut dihapus dari tabel induk'
+//   id integer [pk, increment]
+//   pengajar_id integer [not null]
+//   //waktu_id integer [not null, ref: > waktu.id]
+//   //hindari bool [not null, default: true]
+//   hari integer [not null, note: '1: Senin, 2: Selasa, 3: Rabu, 4: Kamis, 5: Jumat, 6: Sabtu, 7: Minggu']
+//   //mulai text [not null, note: 'HH:MM']
+//   //selesai text [not null, note: 'HH:MM']
+// }
+//
+// Ref {
+//   preferensi_waktu.pengajar_id > pengajar.id [delete: cascade, update: no action]
+// }
+
+Table ruangan {
+  id integer [pk, increment]
+  nama text [not null]
+  jenis text [not null, default: 'teori', note: 'Possible value: teori, praktek; Untuk membedakan perkuliahan di ruang kelas dengan di laboratorium']
+
+  indexes {
+    (nama, jenis) [unique]
+  }
+}
+
+Table mata_kuliah {
+  id integer [pk, increment]
+  nama text [not null]
+  semester integer [not null]
+  jumlah_kelas integer [not null]
+
+  indexes {
+    (nama, semester) [unique]
+  }
+}
+
+Table komponen_mk {
+  id integer [pk, increment]
+  nama_komponen text [not null]
+  jenis text [not null]
+  sks integer [not null, note: "Jumlah blok 45 menit"]
+  // durasi_blok integer [not null]
+  jumlah_sesi_praktikum integer [default: 0, note: "Default 1, bisa 2 atau lebih; Nilai 0 atau null jika bukan praktikum"]
+  mata_kuliah_id integer [not null, ref: > mata_kuliah.id]
+
+  indexes {
+    (nama, jenis, mata_kuliah_id) [unique]
+  }
+}
+
+Table pengampu {
+  id integer [pk, increment]
+  komponen_mk_id integer [not null, ref: > komponen_mk.id]
+  pengajar_id integer [not null, ref: > pengajar.id]
+
+  indexes {
+    (komponen_mk_id, pengajar_id) [unique]
+  }
+}
+
+Table jadwal {
+  id integer [pk, increment]
+  komponen_mk_id integer [not null, ref: > komponen_mk.id]
+  waktu_mulai_id integer [not null, ref: > timeslots.id]
+  pengajar_id integer [not null, ref: > pengajar.id]
+  ruangan_id integer [ref: > ruangan.id, note: 'null jika online']
+
+  kelas char [not null, note: 'contoh: A, B, C']
+  sesi_ke integer [note: "Sesi ke-berapa untuk praktikum. Contoh: 1, 2; 0 jika bukan praktikum"]
+  durasi_blok integer [not null]
+  daring bool [not null, default: false, note: 'True jika kuliah online']
+
+  indexes {
+    (komponen_mk_id, waktu_mulai_id, pengajar_id, ruangan_id, kelas, daring) [unique]
+  }
+}

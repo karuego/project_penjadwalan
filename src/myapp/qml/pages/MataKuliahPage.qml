@@ -23,8 +23,8 @@ Page {
     property var pengajarModelRef: contextBridgeRef.pengajarModel
     property var matakuliahModelRef: contextBridgeRef.matakuliahModel
 
-    // property string reloadMessage: "Memuat ulang database"
-    // property var reloadFunc: () => matakuliahModelRef.reload()
+    property string reloadMessage: "Memuat ulang database"
+    property var reloadFunc: () => matakuliahModelRef.reload()
 
     ColumnLayout {
         id: mainContainer

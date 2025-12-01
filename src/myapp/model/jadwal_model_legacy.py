@@ -1,75 +1,69 @@
-import re
+from myapp.utils.worker_scheduler import OptimizationWorker
 import sqlite3
 import typing
 from result import Result, Ok, Err, is_ok, is_err
 from maybe import Maybe, Some, Nothing
 
 from PySide6.QtCore import (
-    QAbstractListModel,
+    QAbstractTableModel,
     QByteArray,
     QModelIndex,
     QObject,
     QPersistentModelIndex,
     Qt,
     Slot,
-)
-from .pengajar_model import PengajarModel
-from myapp.utils import (
-    Database,
-    MataKuliah,
-    Pengajar,
+    QThread,
 )
 from myapp import log
+from myapp.utils import Database
+from myapp.utils import sa as v6
+from myapp.utils.struct_jadwal import Jadwal
+from myapp.utils.struct_matakuliah import MataKuliah
+from myapp.utils.worker_scheduler import OptimizationWorker
 
 
-class MataKuliahModel(QAbstractListModel):
+class JadwalModel(QAbstractTableModel):
     ID_ROLE: int = int(Qt.ItemDataRole.UserRole) + 1
-    NAMA_ROLE: int = int(Qt.ItemDataRole.UserRole) + 2
-    TIPE_ROLE: int = int(Qt.ItemDataRole.UserRole) + 3
-    SKS_ROLE: int = int(Qt.ItemDataRole.UserRole) + 4
-    SEMESTER_ROLE: int = int(Qt.ItemDataRole.UserRole) + 5
-    JUMLAH_KELAS_ROLE: int = int(Qt.ItemDataRole.UserRole) + 6
-    PENGAMPU_ROLE: int = int(Qt.ItemDataRole.UserRole) + 7
+    HARI_ROLE: int = int(Qt.ItemDataRole.UserRole) + 2
+    JAM_ROLE: int = int(Qt.ItemDataRole.UserRole) + 3
+    MATAKULIAH_ROLE: int = int(Qt.ItemDataRole.UserRole) + 4
+    TIPE_ROLE: int = int(Qt.ItemDataRole.UserRole) + 5
+    SKS_ROLE: int = int(Qt.ItemDataRole.UserRole) + 6
+    SEMESTER_ROLE: int = int(Qt.ItemDataRole.UserRole) + 7
+    KELAS_ROLE: int = int(Qt.ItemDataRole.UserRole) + 8
+    RUANGAN_ROLE: int = int(Qt.ItemDataRole.UserRole) + 9
+    DARING_ROLE: int = int(Qt.ItemDataRole.UserRole) + 10
+    PENGAJAR_ROLE: int = int(Qt.ItemDataRole.UserRole) + 11
 
     _filter_query: str = ""  # pyright: ignore[reportRedeclaration]
-    _filter_tipe: str = "semua"  # pyright: ignore[reportRedeclaration]
+    _filter_tipe: str = "teori"  # pyright: ignore[reportRedeclaration]
 
     def __init__(self, db: Database, parent: QObject | None = None):
         super().__init__(parent)
         self.db: Database = db
-        self._all_data: list[MataKuliah] = []
-        self._filtered: list[MataKuliah] = []
+        self._data: list[Jadwal] = []
+        self._filtered: list[Jadwal] = []
 
-    @typing.override
-    def data(
-        self,
-        index: QModelIndex | QPersistentModelIndex,
-        role: int = Qt.ItemDataRole.DisplayRole,
-    ) -> int | str | dict[str, str] | None:
-        """Mengembalikan data untuk item dan role tertentu."""
-
-        if not index.isValid():
-            return None
-
-        matkul: MataKuliah = self._filtered[index.row()]
-        pengampu: Pengajar = matkul.getPengampu() or Pengajar()
-
-        return {
-            self.ID_ROLE: matkul.getId(),
-            self.NAMA_ROLE: matkul.getNama(),
-            self.TIPE_ROLE: matkul.getTipe(),
-            self.SKS_ROLE: matkul.getSks(),
-            self.SEMESTER_ROLE: matkul.getSemester(),
-            self.JUMLAH_KELAS_ROLE: matkul.getKelas(),
-            self.PENGAMPU_ROLE: pengampu.asDict(),
-        }.get(role, None)
+        # Definisi nama kolom header
+        self._headers: list[str] = [
+            "ID",
+            "Hari",
+            "Jam",
+            "Mata Kuliah",
+            "Jenis",
+            "SKS",
+            "Semester",
+            "Kelas",
+            "Ruangan",
+            "Daring",
+            "Nama Pengajar",
+        ]
 
     @typing.override
     def rowCount(
-        self,
-        parent: QModelIndex | QPersistentModelIndex | None = None,
+        self, parent: QModelIndex | QPersistentModelIndex | None = None
     ) -> int:
-        """Mengembalikan jumlah total item dalam model."""
+        """Menentukan Jumlah Baris"""
         if parent is None:
             parent = QModelIndex()
 
@@ -77,85 +71,122 @@ class MataKuliahModel(QAbstractListModel):
         return len(self._filtered)
 
     @typing.override
+    def columnCount(
+        self, parent: QModelIndex | QPersistentModelIndex | None = None
+    ) -> int:
+        """Menentukan Jumlah Kolom"""
+        if parent is None:
+            parent = QModelIndex()
+        return len(self._headers)
+
+    @typing.override
+    def data(
+        self,
+        index: QModelIndex | QPersistentModelIndex,
+        role: int = Qt.ItemDataRole.DisplayRole,
+    ) -> int | str | bool | None:
+        """Mengambil Data untuk setiap Sel (Baris x Kolom)."""
+        if not index.isValid():
+            return None
+
+        # Kita hanya melayani DisplayRole (untuk teks di layar)
+        if role == Qt.ItemDataRole.DisplayRole:
+            return None
+
+        row: int = index.row()
+        col: int = index.column()
+
+        # Ambil object/dictionary dari list
+        item: Jadwal = self._data[row]
+
+        return {
+            0: item.getId(),
+            1: item.getHari(),
+            2: item.getJam(),
+            3: item.getMatakuliah(),
+            4: item.getJenis(),
+            5: item.getSks(),
+            6: item.getSemester(),
+            7: item.getKelas(),
+            8: item.getRuangan(),
+            9: item.getDaring(),
+            10: item.getPengajar(),
+        }.get(col, None)
+
+    @typing.override
     def roleNames(self) -> dict[int, QByteArray]:
         """Menghubungkan roles dengan nama yang akan digunakan di QML."""
         return {
+            Qt.ItemDataRole.DisplayRole: QByteArray(b"display"),
             self.ID_ROLE: QByteArray(b"id_"),
-            self.NAMA_ROLE: QByteArray(b"nama"),
+            self.HARI_ROLE: QByteArray(b"hari"),
+            self.JAM_ROLE: QByteArray(b"jam"),
+            self.MATAKULIAH_ROLE: QByteArray(b"matakuliah"),
             self.TIPE_ROLE: QByteArray(b"tipe"),
             self.SKS_ROLE: QByteArray(b"sks"),
             self.SEMESTER_ROLE: QByteArray(b"semester"),
-            self.JUMLAH_KELAS_ROLE: QByteArray(b"kelas"),
-            self.PENGAMPU_ROLE: QByteArray(b"pengampu"),
+            self.KELAS_ROLE: QByteArray(b"kelas"),
+            self.RUANGAN_ROLE: QByteArray(b"ruangan"),
+            self.DARING_ROLE: QByteArray(b"daring"),
+            self.PENGAJAR_ROLE: QByteArray(b"pengajar"),
         }
 
-    def setDataMataKuliah(self, data: list[MataKuliah]) -> None:
-        self._all_data = list[MataKuliah](data)
-        self._filtered = list[MataKuliah](data)
+    @typing.override
+    def headerData(
+        self,
+        section: int,
+        orientation: Qt.Orientation,
+        role: int = Qt.ItemDataRole.DisplayRole,
+    ):
+        """Mengatur Header (Judul Kolom)"""
+        # section = nomor kolom (0, 1, 2...) jika orientation horizontal
+        if role == Qt.ItemDataRole.DisplayRole:
+            if orientation == Qt.Orientation.Horizontal:
+                if 0 <= section < len(self._headers):
+                    return self._headers[section]
+        return None
 
-    def addMataKuliahToList(self, matkul: MataKuliah) -> None:
-        """Method untuk menambahkan mata kuliah ke database."""
-        self._all_data.append(matkul)
-        self._filtered.append(matkul)
+    def setDataJadwal(self, data: list[Jadwal]) -> None:
+        self._data = list[Jadwal](data)
+        self._filtered = list[Jadwal](data)
+
+    def addToList(self, jadwal: Jadwal) -> None:
+        """Method untuk menambahkan jadwal ke database."""
+        self._data.append(jadwal)
+        self._filtered.append(jadwal)
         self.fnFilter(self._filter_query, self._filter_tipe)
 
-    def addMataKuliahToDatabase(self, matkul: MataKuliah) -> tuple[bool, str]:
-        """
-        Menambahkan mata kuliah baru ke database dengan validasi
-        Returns: (success, message)
-        """
+    def addToDatabase(self, jadwal: Jadwal) -> Result[str, str]:
+        """Menambahkan jadwal baru ke database"""
         conn = self.db.get_connection()
         cursor: sqlite3.Cursor = conn.cursor()
         _ = cursor.execute("PRAGMA foreign_keys = ON;")
 
         try:
-            # Validasi input
-            if not all(
-                [
-                    matkul.getNama(),
-                    matkul.getTipe(),
-                    matkul.getSks(),
-                    matkul.getSemester(),
-                    matkul.getKelas(),
-                    matkul.getPengampu(),
-                ]
-            ):
-                return (
-                    False,
-                    "Field Nama, Jenis, SKS, Semester, Jumlah kelas, dan Pengampu harus diisi",
-                )
-
-            query = "SELECT nama FROM mata_kuliah WHERE nama LIKE ?"
-            _ = cursor.execute(query, (f"%{matkul.getNama()}%",))
-            data_lama: str | None = typing.cast(str | None, cursor.fetchone())
-
-            if data_lama is not None:
-                return False, f'Mata kuliah "{matkul.getNama()}" sudah ada.'
-
             _ = cursor.execute(
                 """
-                    INSERT INTO mata_kuliah (nama, jenis, sks, semester, jumlah_kelas, pengajar_id)
+                    INSERT INTO jadwal (nama, jenis, sks, semester, jumlah_kelas, pengajar_id)
                     VALUES (?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    matkul.getNama(),
-                    matkul.getTipe(),
-                    matkul.getSks(),
-                    matkul.getSemester(),
-                    matkul.getKelas(),
-                    matkul.getPengampu().getId(),  # pyright: ignore[reportOptionalMemberAccess]
+                    jadwal.getNama(),
+                    jadwal.getTipe(),
+                    jadwal.getSks(),
+                    jadwal.getSemester(),
+                    jadwal.getKelas(),
+                    jadwal.getPengampu().getId(),  # pyright: ignore[reportOptionalMemberAccess]
                 ),
             )
 
-            matkul_id_baru: int | None = cursor.lastrowid
-            if not matkul_id_baru:
+            jadwal_id_baru: int | None = cursor.lastrowid
+            if not jadwal_id_baru:
                 log.info("Gagal menambahkan mata kuliah")
                 return False, "Gagal menambahkan mata Kuliah"
 
             log.info(
-                f"Mata Kuliah '{matkul.getNama()}' dibuat dengan ID: {matkul_id_baru}"
+                f"Mata Kuliah '{jadwal.getNama()}' dibuat dengan ID: {jadwal_id_baru}"
             )
-            matkul.setId(matkul_id_baru)
+            jadwal.setId(jadwal_id_baru)
 
             conn.commit()
             return True, "Mata Kuliah berhasil ditambahkan"
@@ -467,14 +498,18 @@ class MataKuliahModel(QAbstractListModel):
     #             break
 
     def loadDatabase(self) -> None:
-        semua_matkul: list[MataKuliah] = self.db.get_all_matakuliah()
-        for matkul in semua_matkul:
-            self.addMataKuliahToList(matkul)
+        semua_jadwal: list[Jadwal] = self.db.get_all_jadwal()
+        for jadwal in semua_jadwal:
+            self.addToList(jadwal)
+
+    def fnReload(self) -> None:
+        self.beginResetModel()
+        self._data.clear()
+        self._filtered.clear()
+        self.endResetModel()
+
+        self.loadDatabase()
 
     @Slot()  # pyright: ignore[reportAny]
     def reload(self) -> None:
-        # self.beginResetModel()
-        self._all_data.clear()
-        self._filtered.clear()
-        # self.endResetModel()
-        self.loadDatabase()
+        self.fnReload()

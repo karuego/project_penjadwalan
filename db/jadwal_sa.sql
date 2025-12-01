@@ -14,37 +14,39 @@ PRAGMA locking_mode = EXCLUSIVE;
 
 -- Blok waktu 45 menit
 CREATE TABLE timeslots (
-    id INTEGER PRIMARY KEY,
-    hari INTEGER NOT NULL,
-    mulai TEXT NOT NULL,
-    selesai TEXT NOT NULL,
+    id      INTEGER PRIMARY KEY,
+    hari    INTEGER NOT NULL,
+    mulai   TEXT    NOT NULL,
+    selesai TEXT    NOT NULL,
+
     UNIQUE(hari, mulai, selesai)
 );
 
 CREATE TABLE pengajar (
-    id TEXT PRIMARY KEY,
-    nama TEXT NOT NULL,
-    -- jenis: 'dosen', 'asdos'
-    jenis TEXT NOT NULL DEFAULT 'dosen',
-    preferensi_waktu TEXT
+    id                  TEXT PRIMARY KEY, -- Nomor Induk (NIDN/NIM)
+    nama                TEXT NOT NULL,
+    jenis               TEXT NOT NULL DEFAULT 'dosen', -- jenis: 'dosen', 'asdos'
+    preferensi_waktu    TEXT -- comma-separated list of integers representing non-preferred days (1-7)
 );
 
 CREATE TABLE ruangan (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nama TEXT NOT NULL UNIQUE,
-    -- jenis: 'teori', 'praktek'
-    jenis TEXT NOT NULL DEFAULT 'teori'
+    id      INTEGER PRIMARY KEY AUTOINCREMENT,
+    nama    TEXT    NOT NULL UNIQUE, -- Contoh: "FT-I.7", "FT-III.2", "FT-III.4", "FT-III.5"
+    jenis   TEXT    NOT NULL DEFAULT 'teori', -- jenis: 'teori', 'praktek'
+
+    UNIQUE(nama, jenis)
 );
 
 -- Unit yang akan dijadwalkan
 CREATE TABLE mata_kuliah (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nama TEXT NOT NULL, -- Misal: 'Teori Basis Data', 'Praktikum Basis Data'
-    jenis TEXT NOT NULL DEFAULT 'teori', -- 'teori' atau 'praktek'
-    sks INTEGER NOT NULL, -- Jumlah blok 45 menit
-    semester INTEGER NOT NULL,
-    jumlah_kelas INTEGER NOT NULL,
-    pengajar_id TEXT,
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    nama            TEXT    NOT NULL, -- Misal: 'Basis Data', 'Praktikum Basis Data'
+    jenis           TEXT    NOT NULL    DEFAULT 'teori', -- 'teori' atau 'praktek'
+    sks             INTEGER NOT NULL, -- Jumlah blok 45 menit
+    semester        INTEGER NOT NULL,
+    jumlah_kelas    INTEGER NOT NULL, -- jumlah kelas yang mengikuti mata kuliah
+    pengajar_id     TEXT,
+
     FOREIGN KEY (pengajar_id) REFERENCES pengajar(id)
 );
 
@@ -59,21 +61,21 @@ CREATE TABLE mata_kuliah (
 
 -- Merepresentasikan satu komponen yang telah dijadwalkan.
 CREATE TABLE jadwal (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    komponen_mk_id INTEGER NOT NULL,
-    pengajar_id INTEGER NOT NULL,
-    kelas CHAR NOT NULL,
-    -- semester INTEGER NOT NULL,
-    -- jenis TEXT NOT NULL DEFAULT 'teori', -- 'teori' atau 'praktek'
-    sesi_ke INTEGER NOT NULL, -- Sesi ke-berapa untuk praktikum, 1 atau 2
-    waktu_id_start INTEGER NOT NULL,
-    durasi_blok INTEGER NOT NULL,
-    ruangan_id INTEGER NULL, -- Bisa NULL jika online
-    daring BOOLEAN NOT NULL DEFAULT FALSE, -- True jika online
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    hari            TEXT    NOT NULL, -- Contoh: "Senin", "Selasa", "Rabu"
+    jam             TEXT    NOT NULL, -- Contoh: "08:00 - 09:30", "09:35 - 11:05"
 
-    FOREIGN KEY (komponen_mk_id) REFERENCES komponen_mk(id),
-    FOREIGN KEY (pengajar_id) REFERENCES pengajar(id),
-    FOREIGN KEY (waktu_id_start) REFERENCES waktu(id)
+    matakuliah      TEXT    NOT NULL, -- "Basis Data", "Praktikum Basis Data"
+    jenis           TEXT    NOT NULL, -- 'teori' atau 'praktek'
+
+    sks             INTEGER NOT NULL, -- 2 (teori) atau 3 (teori + praktikum (jenis==praktek))
+    semester        INTEGER NOT NULL,
+
+    kelas           CHAR    NOT NULL, -- Contoh: 'A', 'B', 'C'
+    ruangan         TEXT    NOT NULL, -- Contoh: "FT-III.2", "FT-III.6", "FT-III.7"
+    daring          BOOLEAN NOT NULL    DEFAULT FALSE, -- True jika ruangan habis sehingga akan dialihkan ke perkuliahan online
+
+    pengajar        TEXT    NOT NULL -- Contoh: "Farhan Hidayat", "Safar Husada"
 );
 
 PRAGMA wal_checkpoint(TRUNCATE);

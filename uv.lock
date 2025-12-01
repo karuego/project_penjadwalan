@@ -37,7 +37,7 @@ dev = [
 requires-dist = [
     { name = "pyside6" },
     { name = "result", specifier = ">=0.17.0" },
-    { name = "rustedpy-maybe", specifier = ">=0.0.0" },
+    { name = "rustedpy-maybe", extras = ["result"], specifier = ">=0.0.0" },
 ]
 
 [package.metadata.requires-dev]

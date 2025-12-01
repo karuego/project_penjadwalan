@@ -11,6 +11,7 @@ from .waktu_util import (
 from .struct_pengajar import Pengajar as Pengajar
 from .struct_matakuliah import MataKuliah as MataKuliah
 from .struct_ruangan import Ruangan as Ruangan
+from .struct_jadwal import Jadwal as Jadwal
 
 from .schedule_generator import ScheduleGenerator as ScheduleGenerator
 # from .struktur import (

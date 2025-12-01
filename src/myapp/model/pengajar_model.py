@@ -24,8 +24,8 @@ class PengajarModel(QAbstractListModel):
     TIPE_ROLE: int = int(Qt.ItemDataRole.UserRole) + 3
     WAKTU_ROLE: int = int(Qt.ItemDataRole.UserRole) + 4
 
-    _filter_query: str = ""     # pyright: ignore[reportRedeclaration]
-    _filter_tipe: str = "semua" # pyright: ignore[reportRedeclaration]
+    _filter_query: str = ""  # pyright: ignore[reportRedeclaration]
+    _filter_tipe: str = "semua"  # pyright: ignore[reportRedeclaration]
 
     def __init__(self, db: Database, parent: QObject | None = None):
         super().__init__(parent)
@@ -104,7 +104,7 @@ class PengajarModel(QAbstractListModel):
                 idn: str = "NIDN" if pengajar.getTipe().lower() == "dosen" else "NIM"
 
                 _ = cursor.execute(query, params)
-                data_lama: str | None = cursor.fetchone() # pyright: ignore[reportAny]
+                data_lama: str | None = cursor.fetchone()  # pyright: ignore[reportAny]
 
                 if data_lama is None:
                     _ = cursor.execute(
@@ -112,7 +112,12 @@ class PengajarModel(QAbstractListModel):
                             INSERT INTO pengajar (id, nama, jenis, preferensi_waktu)
                             VALUES (?, ?, ?, ?)
                         """,
-                        (pengajar.getId(), pengajar.getNama(), pengajar.getTipe(), pengajar.getWaktu()),
+                        (
+                            pengajar.getId(),
+                            pengajar.getNama(),
+                            pengajar.getTipe(),
+                            pengajar.getWaktu(),
+                        ),
                     )
                     conn.commit()
                     return True, "Pengajar berhasil ditambahkan"
@@ -128,12 +133,7 @@ class PengajarModel(QAbstractListModel):
         success = True
         message = "Berhasil"
 
-        pengajar = Pengajar(
-            id.strip(),
-            nama.strip(),
-            tipe.strip(),
-            waktu.strip()
-        )
+        pengajar = Pengajar(id.strip(), nama.strip(), tipe.strip(), waktu.strip())
 
         success, message = self.addPengajarToDatabase(pengajar)
         if not success:
@@ -159,7 +159,9 @@ class PengajarModel(QAbstractListModel):
             if pengajar.getId() != old_id:
                 continue
 
-            res: Result[str, str] = self.db.update_pengajar(old_id, Pengajar(new_id, nama, tipe, waktu))
+            res: Result[str, str] = self.db.update_pengajar(
+                old_id, Pengajar(new_id, nama, tipe, waktu)
+            )
             if is_err(res):
                 return False, res.unwrap_err()
 
@@ -174,7 +176,12 @@ class PengajarModel(QAbstractListModel):
             pengajar.setWaktu(waktu)
 
             # Beri tahu QML View bahwa data pada index tersebut telah berubah untuk role tertentu
-            roles_to_notify: list[int] = [PengajarModel.ID_ROLE, PengajarModel.NAMA_ROLE, PengajarModel.TIPE_ROLE, PengajarModel.WAKTU_ROLE]
+            roles_to_notify: list[int] = [
+                PengajarModel.ID_ROLE,
+                PengajarModel.NAMA_ROLE,
+                PengajarModel.TIPE_ROLE,
+                PengajarModel.WAKTU_ROLE,
+            ]
             model_index: QModelIndex = self.index(index, 0)
             self.dataChanged.emit(model_index, model_index, roles_to_notify)
 
@@ -260,7 +267,6 @@ class PengajarModel(QAbstractListModel):
         if is_err(res):
             self.endRemoveRows()
             return {"success": False, "message": res.unwrap_err()}
-
 
         del self._all_data[index]
         del self._filtered[index]
@@ -353,6 +359,7 @@ class PengajarModel(QAbstractListModel):
 
     def loadDatabase(self) -> None:
         semua_pengajar: list[Pengajar] = self.db.get_all_pengajar()
+
         for pengajar in semua_pengajar:
             self.addPengajarToList(pengajar)
 

@@ -1,0 +1,210 @@
+from myapp.utils.worker_scheduler import OptimizationWorker
+import sqlite3
+import typing
+from result import Result, Ok, Err, is_ok, is_err
+# from maybe import Maybe, Some, Nothing # (Opsional jika tidak dipakai)
+
+from PySide6.QtCore import (
+    QAbstractTableModel,
+    QByteArray,
+    QModelIndex,
+    QObject,
+    QPersistentModelIndex,
+    Qt,
+    Slot,
+    QThread,
+    Signal,  # Tambahkan Signal
+)
+from myapp import log
+from myapp.utils import Database
+
+from myapp.utils import sa as v6  # Pastikan path ini benar sesuai struktur folder anda
+from myapp.utils.struct_jadwal import Jadwal
+from myapp.utils.struct_matakuliah import MataKuliah
+
+
+class JadwalModel(QAbstractTableModel):
+    # ... (Role Definitions tetap sama) ...
+    ID_ROLE: int = int(Qt.ItemDataRole.UserRole) + 1
+    HARI_ROLE: int = int(Qt.ItemDataRole.UserRole) + 2
+    JAM_ROLE: int = int(Qt.ItemDataRole.UserRole) + 3
+    MATAKULIAH_ROLE: int = int(Qt.ItemDataRole.UserRole) + 4
+    TIPE_ROLE: int = int(Qt.ItemDataRole.UserRole) + 5
+    SKS_ROLE: int = int(Qt.ItemDataRole.UserRole) + 6
+    SEMESTER_ROLE: int = int(Qt.ItemDataRole.UserRole) + 7
+    KELAS_ROLE: int = int(Qt.ItemDataRole.UserRole) + 8
+    RUANGAN_ROLE: int = int(Qt.ItemDataRole.UserRole) + 9
+    DARING_ROLE: int = int(Qt.ItemDataRole.UserRole) + 10
+    PENGAJAR_ROLE: int = int(Qt.ItemDataRole.UserRole) + 11
+
+    # --- SIGNALS UNTUK GUI ---
+    # Signal(iterasi, cost)
+    optimizationProgress: Signal = Signal(int, float, arguments=["iteration", "cost"])
+    # Signal(success, message)
+    optimizationFinished: Signal = Signal(bool, str, arguments=["success", "message"])
+
+    _filter_query: str = ""
+    _filter_tipe: str = "teori"
+
+    def __init__(self, db: Database, parent: QObject | None = None):
+        super().__init__(parent)
+        self.db: Database = db
+        self._data: list[Jadwal] = []
+        self._filtered: list[Jadwal] = []
+
+        # Inisialisasi thread container
+        self.worker_thread = None
+        self.worker = None
+
+        self._headers: list[str] = [
+            "ID",
+            "Hari",
+            "Jam",
+            "Mata Kuliah",
+            "Jenis",
+            "SKS",
+            "Semester",
+            "Kelas",
+            "Ruangan",
+            "Daring",
+            "Pengajar",
+        ]
+
+        # Load data awal jika ada di DB
+        self.loadDatabase()
+
+    # ... (rowCount, columnCount, data, roleNames, headerData TETAP SAMA) ...
+
+    # --- MODIFIKASI: Method untuk mengganti seluruh data (hasil generate) ---
+    def setAllData(self, new_data: list[Jadwal]):
+        self.beginResetModel()
+        self._data = new_data
+        self._filtered = new_data  # Reset filter sementara
+        self.endResetModel()
+
+        # Terapkan ulang filter jika ada state filter sebelumnya
+        self.fnFilter(self._filter_query, self._filter_tipe)
+
+    # --- LOGIKA OPTIMASI (INTEGRASI WORKER) ---
+    @Slot()
+    def startOptimization(self):
+        """Memulai proses generate jadwal di thread terpisah."""
+        if self.worker_thread is not None and self.worker_thread.isRunning():
+            log.warning("Optimasi sedang berjalan!")
+            return
+
+        # Load data (Blocking sebentar tidak apa-apa untuk load awal)
+        v6.load_data()
+
+        self.worker = OptimizationWorker(max_iter=5000)
+        self.worker_thread = QThread()
+        self.worker.moveToThread(self.worker_thread)
+
+        # --- SIGNAL CONNECTIONS ---
+
+        # 1. Start logic
+        self.worker_thread.started.connect(self.worker.run)
+
+        # 2. Data handling
+        self.worker.progress.connect(self._handle_progress)
+        self.worker.finished.connect(self._handle_finished)
+        self.worker.error.connect(self._handle_error)
+
+        # 3. CLEANUP LOGIC (Sangat Penting)
+        # Saat worker selesai -> suruh thread berhenti (quit)
+        self.worker.finished.connect(self.worker_thread.quit)
+        # Saat worker selesai -> hapus object worker
+        self.worker.finished.connect(self.worker.deleteLater)
+        # Saat thread benar-benar selesai berhenti -> hapus object thread
+        self.worker_thread.finished.connect(self.worker_thread.deleteLater)
+        # Saat thread benar-benar selesai berhenti -> bersihkan variabel Python (Baru!)
+        self.worker_thread.finished.connect(self._cleanup_thread_references)
+
+        self.worker_thread.start()
+
+    def _handle_finished(self, raw_schedule: list, final_cost: float):
+        """Menangani hasil akhir optimasi."""
+        log.info(f"Optimasi Selesai. Cost: {final_cost}")
+
+        try:
+            # Konversi di Main Thread (Aman)
+            jadwal_list = v6.convert_to_struct_objects(raw_schedule)
+            self.setAllData(jadwal_list)
+
+            msg = f"Jadwal berhasil dibuat dengan penalti: {final_cost:.2f}"
+            self.optimizationFinished.emit(True, msg)
+
+        except Exception as e:
+            self._handle_error(f"Error converting result: {str(e)}")
+
+        # HAPUS BARIS INI! Jangan set None disini.
+        # self.worker_thread = None  <-- INI PENYEBAB CRASH
+
+    def _cleanup_thread_references(self):
+        """
+        Dipanggil otomatis saat self.worker_thread memancarkan signal finished.
+        Disini baru aman untuk menghapus referensi Python.
+        """
+        log.info("Membersihkan referensi thread.")
+        self.worker_thread = None
+        self.worker = None
+
+    def _handle_error(self, error_msg: str):
+        log.error(f"Optimasi Error: {error_msg}")
+        self.optimizationFinished.emit(False, error_msg)
+
+        # Paksa berhenti jika error
+        if self.worker_thread and self.worker_thread.isRunning():
+            self.worker_thread.quit()
+            # self.worker_thread = None # Jangan null-kan disini, biarkan _cleanup_thread_references yg handle
+
+    def _handle_progress(self, iteration: int, cost: float):
+        """Relay signal progress ke QML."""
+        self.optimizationProgress.emit(iteration, cost)
+
+    # ... (Sisa method CRUD: fnAdd, fnUpdate, removeById dll TETAP SAMA) ...
+
+    def fnFilter(self, query: str, tipe: str) -> None:
+        """Filter data di memori (tanpa query DB ulang agar cepat)."""
+        q = query.strip().lower()
+        t = tipe.strip().lower()
+
+        self._filter_query = q
+        self._filter_tipe = t
+
+        self.beginResetModel()
+
+        temp_filtered = []
+        for item in self._data:
+            # Filter Logika
+            match_tipe = True
+            if t != "semua":
+                # Asumsi di struct Jadwal ada getJenis() atau getTipe()
+                # Sesuaikan dengan struct_jadwal.py anda
+                match_tipe = (item.getJenis().lower() == t) or (
+                    item.getMatakuliah().lower() == t
+                )  # Adaptasi field
+
+            match_nama = True
+            if q:
+                match_nama = (
+                    q in item.getMatakuliah().lower() or q in item.getPengajar().lower()
+                )
+
+            if match_tipe and match_nama:
+                temp_filtered.append(item)
+
+        self._filtered = temp_filtered
+        self.endResetModel()
+
+    @Slot(str, str)
+    def filter(self, query: str, tipe: str) -> None:
+        self.fnFilter(query, tipe)
+
+    def loadDatabase(self) -> None:
+        semua_jadwal = self.db.get_all_jadwal()
+        self.setAllData(semua_jadwal)
+
+    @Slot()
+    def reload(self) -> None:
+        self.loadDatabase()

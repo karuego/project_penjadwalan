@@ -12,42 +12,61 @@ Page {
     Material.theme: Material.Light
 
     property StackView stackViewRef
-    property CustomDialog confirmDialogRef
-    property CustomDialog alertDialogRef
-    property Snackbar snackbarRef
-
-    property var contextBridgeRef: contextBridge // qmllint disable unqualified
+    property var contextBridgeRef: contextBridge
     property var jadwalModelRef: contextBridgeRef.jadwalModel
 
-    // property string reloadMessage: "Memuat ulang database"
-    // property var reloadFunc: () => matakuliahModelRef.reload()
-
     property bool isLoading: false
+
+    // --- KONEKSI KE PYTHON MODEL ---
+    Connections {
+        target: jadwalModelRef
+
+        function onOptimizationProgress(iteration, cost) {
+            // Update UI Realtime
+            progressBar.value = iteration;
+            statusLabel.text = "Iterasi: " + iteration + " | Konflik (Cost): " + cost.toFixed(2);
+        }
+
+        function onOptimizationFinished(success, message) {
+            root.isLoading = false;
+            busyIndicator.running = false;
+
+            if (success) {
+                statusLabel.text = "Selesai! " + message;
+                progressBar.value = progressBar.to;
+
+                // Aktifkan tombol lihat jadwal
+                btnTeori.enabled = true;
+                btnPraktek.enabled = true;
+
+                // Tampilkan notifikasi (opsional)
+                // snackbarRef.show(message)
+            } else {
+                statusLabel.text = "Error: " + message;
+            }
+        }
+    }
 
     ColumnLayout {
         id: mainContainer
         anchors.fill: parent
         anchors.margins: 130
-        spacing: 0
+        spacing: 16
 
         Item {
             Layout.fillHeight: true
         }
 
+        // --- BAGIAN KONTROL ---
         RowLayout {
-            id: listTool
             Layout.fillWidth: true
-
             Label {
                 text: "Periode akademik :"
                 font.pixelSize: 15
-                Layout.alignment: Qt.AlignVCenter
             }
-
             ComboBox {
                 id: comboBoxPeriode
                 Layout.fillWidth: true
-
                 model: ListModel {
                     ListElement {
                         text: qsTr("Gasal")
@@ -58,61 +77,71 @@ Page {
                         value: "genap"
                     }
                 }
-
                 textRole: "text"
                 valueRole: "value"
-
-                onActivated: {
-                    //
-                }
             }
         }
 
         RowLayout {
             Layout.fillWidth: true
-
             Item {
                 width: 80
             }
 
             Button {
-                text: "Buat Jadwal"
+                text: root.isLoading ? "Sedang Memproses..." : "Buat Jadwal Otomatis"
                 Layout.fillWidth: true
+                enabled: !root.isLoading
+
                 onClicked: {
-                    if (!isLoading) timer.start(), busyIndicator.running = true;
-                    else timer.stop(), busyIndicator.running = false;
-                    root.isLoading = !root.isLoading;
+                    root.isLoading = true;
+                    busyIndicator.running = true;
+                    progressBar.value = 0;
+                    statusLabel.text = "Memulai algoritma...";
+
+                    // Panggil fungsi Python
+                    jadwalModelRef.startOptimization();
                 }
             }
-
             Item {
                 width: 80
+            }
+        }
+
+        // --- PROGRESS BAR ---
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 5
+
+            Label {
+                id: statusLabel
+                text: "Siap membuat jadwal"
+                Layout.alignment: Qt.AlignHCenter
+                color: "#666"
+            }
+
+            ProgressBar {
+                id: progressBar
+                Layout.fillWidth: true
+                from: 0
+                to: 10000 // Sesuaikan dengan max_iter di Python
+                value: 0
             }
         }
 
         BusyIndicator {
             id: busyIndicator
             running: false
-            Layout.fillWidth: true
+            visible: running
+            Layout.alignment: Qt.AlignHCenter
         }
 
-        Timer {
-            id: timer
-            interval: 2000
-            onTriggered: {
-                busyIndicator.running = false;
-                btnTeori.enabled = true
-                btnPraktek.enabled = true
-            }
-        }
-
+        // --- NAVIGASI HASIL ---
         ColumnLayout {
             Layout.fillWidth: true
-            Layout.topMargin: 16
-            Layout.bottomMargin: 16
+            Layout.topMargin: 24
 
             Label {
-                Layout.fillWidth: true
                 Layout.alignment: Qt.AlignHCenter
                 text: "Lihat jadwal yang sudah dibuat :"
                 font.pixelSize: 15
@@ -120,57 +149,22 @@ Page {
 
             RowLayout {
                 Layout.fillWidth: true
-                Layout.topMargin: 16
-                Layout.bottomMargin: 16
+                Layout.topMargin: 10
 
                 Button {
                     id: btnTeori
-                    text: "Lihat Jadwal Teori"
+                    text: "Jadwal Teori"
                     Layout.fillWidth: true
-                    enabled: false
+                    // enabled: true // Debugging: set true untuk test navigasi
                     onClicked: root.gotoActionPage("teori")
                 }
 
                 Button {
                     id: btnPraktek
-                    text: "Lihat Jadwal Praktek"
+                    text: "Jadwal Praktikum"
                     Layout.fillWidth: true
-                    enabled: false
+                    // enabled: true
                     onClicked: root.gotoActionPage("praktek")
-                }
-            }
-        }
-
-        TextField {
-            id: customField
-            placeholderText: "Fokus atau Hover"
-            visible: false
-
-            background: Rectangle {
-                MouseArea {
-                    id: mouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                }
-
-                Rectangle {
-                    property bool isActive: customField.activeFocus || mouseArea.containsMouse
-
-                    width: parent.width
-                    height: isActive ? 2 : 1
-                    color: isActive ? Material.accent : "#888"
-                    anchors.bottom: parent.bottom
-
-                    Behavior on color {
-                        ColorAnimation {
-                            duration: 200
-                        }
-                    }
-                    Behavior on height {
-                        NumberAnimation {
-                            duration: 200
-                        }
-                    }
                 }
             }
         }
@@ -184,9 +178,5 @@ Page {
         root.stackViewRef.push("JadwalActionPage.qml", {
             type: type
         });
-    }
-
-    Component.onCompleted: {
-        //
     }
 }

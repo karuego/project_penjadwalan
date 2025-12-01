@@ -4,6 +4,7 @@
     "files.trimTrailingWhitespace": true,
     "files.insertFinalNewline": true,
     "files.trimFinalNewlines": true,
+    "files.eol": "\n",
     "python.analysis.typeCheckingMode": "off",
     "sqltools.connections": [
         {
@@ -15,10 +16,21 @@
     ],
     "qt.qml.importPaths": [
         "./src",
-        "${workspaceFolder}/src"
+        "${workspaceFolder}/src",
+        "D:/Studio/Git/karuego/project_penjadwalan/.venv/Lib/site-packages/PySide6/qml"
     ],
 
     "qml.importPaths": [
-        "./src"
+        "./src",
+        "D:/Studio/Git/karuego/project_penjadwalan/.venv/Lib/site-packages/PySide6/qml"
+    ],
+    "terminal.integrated.env.windows": {
+        "QML_IMPORT_PATH": "D:/Studio/Git/karuego/project_penjadwalan/.venv/Lib/site-packages/PySide6/qml"
+    },
+    "python.useEnvironmentsExtension": true,
+    "editor.formatOnSave": true,
+    "python-envs.pythonProjects": [],
+    "qt-support.qtInstallDirectories": [
+        "D:/Studio/Git/karuego/project_penjadwalan/.venv/Lib/site-packages/PySide6/qml"
     ]
 }
