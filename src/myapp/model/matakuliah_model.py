@@ -67,11 +67,11 @@ class MataKuliahModel(QAbstractListModel):
     @typing.override
     def rowCount(
         self,
-        parent: QModelIndex | QPersistentModelIndex | None = None,
+        parent: QModelIndex | QPersistentModelIndex = QModelIndex(),  # pyright: ignore[reportCallInDefaultInitializer]
     ) -> int:
         """Mengembalikan jumlah total item dalam model."""
-        if parent is None:
-            parent = QModelIndex()
+        if parent.isValid():
+            return 0
 
         # return len(self._all_data)
         return len(self._filtered)
@@ -125,8 +125,10 @@ class MataKuliahModel(QAbstractListModel):
                     "Field Nama, Jenis, SKS, Semester, Jumlah kelas, dan Pengampu harus diisi",
                 )
 
-            query = "SELECT nama FROM mata_kuliah WHERE nama LIKE ?"
-            _ = cursor.execute(query, (f"%{matkul.getNama()}%",))
+            query = "SELECT nama FROM mata_kuliah WHERE nama LIKE ? AND pengajar_id = ?"
+            _ = cursor.execute(
+                query, (f"%{matkul.getNama()}%", matkul.getPengampu().getId())
+            )
             data_lama: str | None = typing.cast(str | None, cursor.fetchone())
 
             if data_lama is not None:
@@ -473,8 +475,8 @@ class MataKuliahModel(QAbstractListModel):
 
     @Slot()  # pyright: ignore[reportAny]
     def reload(self) -> None:
-        # self.beginResetModel()
+        self.beginResetModel()
         self._all_data.clear()
         self._filtered.clear()
-        # self.endResetModel()
+        self.endResetModel()
         self.loadDatabase()

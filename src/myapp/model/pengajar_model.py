@@ -56,11 +56,11 @@ class PengajarModel(QAbstractListModel):
     @typing.override
     def rowCount(
         self,
-        parent: QModelIndex | QPersistentModelIndex | None = None,
+        parent: QModelIndex | QPersistentModelIndex = QModelIndex(),  # pyright: ignore[reportCallInDefaultInitializer]
     ) -> int:
         """Mengembalikan jumlah total item dalam model."""
-        if parent is None:
-            parent = QModelIndex()
+        if parent.isValid():
+            return 0
 
         # return len(self._all_data)
         return len(self._filtered)

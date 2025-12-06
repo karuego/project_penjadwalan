@@ -89,7 +89,7 @@ Page {
             }
 
             Button {
-                text: root.isLoading ? "Sedang Memproses..." : "Buat Jadwal Otomatis"
+                text: root.isLoading ? "Sedang Memproses..." : "Jalankan Simulated Annealing"
                 Layout.fillWidth: true
                 enabled: !root.isLoading
 
@@ -124,7 +124,7 @@ Page {
                 id: progressBar
                 Layout.fillWidth: true
                 from: 0
-                to: 10000 // Sesuaikan dengan max_iter di Python
+                to: 3000 // Sesuaikan dengan max_iter di Python
                 value: 0
             }
         }

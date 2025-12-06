@@ -1,7 +1,19 @@
+from myapp.utils.struct_jadwal import Jadwal
 from myapp.utils.worker_scheduler import OptimizationWorker
-import sqlite3
-import typing
+from typing import override
 from result import Result, Ok, Err, is_ok, is_err
+
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Table,
+    TableStyle,
+    Paragraph,
+    Spacer,
+    Flowable,
+)
+from reportlab.lib.styles import getSampleStyleSheet
 
 from PySide6.QtCore import (
     QAbstractTableModel,
@@ -13,12 +25,14 @@ from PySide6.QtCore import (
     Slot,
     QThread,
     Signal,
+    QUrl,
 )
 from myapp import log
 from myapp.utils import Database
-
 from myapp.utils import sa as v6
+from myapp.utils.hari import Hari
 from myapp.utils.struct_jadwal import Jadwal
+from myapp.utils.schedule_item import ScheduleItem
 
 
 class JadwalModel(QAbstractTableModel):
@@ -49,8 +63,8 @@ class JadwalModel(QAbstractTableModel):
         self._filter_query: str = ""
         self._filter_tipe: str = "semua"
 
-        self.worker_thread = None
-        self.worker = None
+        self.worker_thread: QThread | None = None
+        self.worker: OptimizationWorker | None = None
 
         self._headers: list[str] = [
             "ID",
@@ -62,7 +76,7 @@ class JadwalModel(QAbstractTableModel):
             "Semester",
             "Kelas",
             "Ruangan",
-            "Daring",
+            "Metode",
             "Pengajar",
         ]
 
@@ -73,86 +87,85 @@ class JadwalModel(QAbstractTableModel):
     # BAGIAN WAJIB QABSTRACTTABLEMODEL (YANG HILANG)
     # ==========================================
 
-    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+    @override
+    def rowCount(
+        self,
+        parent: QModelIndex | QPersistentModelIndex = QModelIndex(),  # pyright: ignore[reportCallInDefaultInitializer]
+    ) -> int:
         # Mengembalikan jumlah baris berdasarkan data yang sudah difilter
         if parent.isValid():
             return 0
+
         return len(self._filtered)
 
-    def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
+    @override
+    def columnCount(
+        self,
+        parent: QModelIndex | QPersistentModelIndex = QModelIndex(),  # pyright: ignore[reportCallInDefaultInitializer]
+    ) -> int:
+        if parent.isValid():
+            return 0
+
         return len(self._headers)
 
+    @override
     def data(
-        self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole
-    ) -> typing.Any:
+        self,
+        index: QModelIndex | QPersistentModelIndex,
+        role: int = Qt.ItemDataRole.DisplayRole,
+    ) -> int | str | None:
         if not index.isValid():
             return None
 
-        row = index.row()
-        col = index.column()
+        row: int = index.row()
+        col: int = index.column()
 
         if row < 0 or row >= len(self._filtered):
             return None
 
         item: Jadwal = self._filtered[row]
 
-        # 1. HANDLE DISPLAY ROLE (Tampilan Teks Biasa di TableView)
-        if role == Qt.ItemDataRole.DisplayRole:
-            if col == 0:
-                return str(item.getId())
-            elif col == 1:
-                return item.getHari()
-            elif col == 2:
-                return item.getJam()
-            elif col == 3:
-                return item.getMatakuliah()
-            elif col == 4:
-                return item.getJenis()
-            elif col == 5:
-                return str(item.getSks())
-            elif col == 6:
-                return str(item.getSemester())
-            elif col == 7:
-                return item.getKelas()
-            elif col == 8:
-                return item.getRuangan()
-            elif col == 9:
-                return "Online" if item.getDaring() else "Offline"
-            elif col == 10:
-                return item.getPengajar()
+        return {
+            # HANDLE DISPLAY ROLE
+            #    (Tampilan Teks Biasa di TableView)
+            Qt.ItemDataRole.DisplayRole: self._handle_display_role(item, col),
+            # HANDLE CUSTOM ROLES
+            #    (Untuk akses via model.roleName di Delegate)
+            self.ID_ROLE: item.getId(),
+            self.HARI_ROLE: item.getHari(),
+            self.JAM_ROLE: item.getJam(),
+            self.MATAKULIAH_ROLE: item.getMatakuliah(),
+            self.TIPE_ROLE: item.getJenis(),
+            self.SKS_ROLE: item.getSks(),
+            self.SEMESTER_ROLE: item.getSemester(),
+            self.KELAS_ROLE: item.getKelas(),
+            self.RUANGAN_ROLE: item.getRuangan(),
+            self.DARING_ROLE: item.getDaring(),
+            self.PENGAJAR_ROLE: item.getPengajar(),
+        }.get(role, None)
 
-        # 2. HANDLE CUSTOM ROLES (Untuk akses via model.roleName di Delegate)
-        elif role == self.ID_ROLE:
-            return item.getId()
-        elif role == self.HARI_ROLE:
-            return item.getHari()
-        elif role == self.JAM_ROLE:
-            return item.getJam()
-        elif role == self.MATAKULIAH_ROLE:
-            return item.getMatakuliah()
-        elif role == self.TIPE_ROLE:
-            return item.getJenis()
-        elif role == self.SKS_ROLE:
-            return item.getSks()
-        elif role == self.SEMESTER_ROLE:
-            return item.getSemester()
-        elif role == self.KELAS_ROLE:
-            return item.getKelas()
-        elif role == self.RUANGAN_ROLE:
-            return item.getRuangan()
-        elif role == self.DARING_ROLE:
-            return item.getDaring()
-        elif role == self.PENGAJAR_ROLE:
-            return item.getPengajar()
+    def _handle_display_role(self, item: Jadwal, col: int) -> str | None:
+        return {
+            0: str(item.getId()),
+            1: item.getHari(),
+            2: item.getJam(),
+            3: item.getMatakuliah(),
+            4: item.getJenis(),
+            5: str(item.getSks()),
+            6: str(item.getSemester()),
+            7: item.getKelas(),
+            8: item.getRuangan(),
+            9: "Online" if item.getDaring() else "Offline",
+            10: item.getPengajar(),
+        }.get(col, None)
 
-        return None
-
+    @override
     def headerData(
         self,
         section: int,
         orientation: Qt.Orientation,
         role: int = Qt.ItemDataRole.DisplayRole,
-    ) -> typing.Any:
+    ) -> str | None:
         if (
             orientation == Qt.Orientation.Horizontal
             and role == Qt.ItemDataRole.DisplayRole
@@ -161,9 +174,10 @@ class JadwalModel(QAbstractTableModel):
                 return self._headers[section]
         return None
 
+    @override
     def roleNames(self) -> dict[int, QByteArray]:
         # Mapping nama role di QML ke konstanta Role Python
-        roles = super().roleNames()
+        roles: dict[int, QByteArray] = super().roleNames()
         roles[self.ID_ROLE] = QByteArray(b"id_role")
         roles[self.HARI_ROLE] = QByteArray(b"hari")
         roles[self.JAM_ROLE] = QByteArray(b"jam")
@@ -182,7 +196,13 @@ class JadwalModel(QAbstractTableModel):
     # ==========================================
 
     def setAllData(self, new_data: list[Jadwal]):
-        """Memperbarui data dan mereset view."""
+        """Memperbarui data, mengurutkannya, dan mereset view."""
+
+        # LOGIKA SORTING:
+        # Key 1: Hari.getId(x.getHari()) -> Mengubah "Senin" jadi 1, "Selasa" jadi 2, dst.
+        # Key 2: x.getJam() -> Mengurutkan string jam ("07:00" < "09:00")
+        new_data.sort(key=lambda x: (Hari.getId(x.getHari()), x.getJam()))
+
         self.beginResetModel()
         self._data = new_data
         self._filtered = new_data  # Default: tampilkan semua sebelum filter ulang
@@ -191,7 +211,7 @@ class JadwalModel(QAbstractTableModel):
         # Terapkan ulang filter terakhir (misal: "teori")
         self.fnFilter(self._filter_query, self._filter_tipe)
 
-    @Slot()
+    @Slot()  # pyright: ignore[reportAny]
     def startOptimization(self):
         """Memulai proses generate jadwal di thread terpisah."""
         if self.worker_thread is not None and self.worker_thread.isRunning():
@@ -202,22 +222,22 @@ class JadwalModel(QAbstractTableModel):
 
         self.worker = OptimizationWorker(max_iter=10000)
         self.worker_thread = QThread()
-        self.worker.moveToThread(self.worker_thread)
+        _ = self.worker.moveToThread(self.worker_thread)
 
-        self.worker_thread.started.connect(self.worker.run)
-        self.worker.progress.connect(self._handle_progress)
-        self.worker.finished.connect(self._handle_finished)
-        self.worker.error.connect(self._handle_error)
+        _ = self.worker_thread.started.connect(self.worker.run)
+        _ = self.worker.progress.connect(self._handle_progress)
+        _ = self.worker.finished.connect(self._handle_finished)
+        _ = self.worker.error.connect(self._handle_error)
 
         # Cleanup connections
-        self.worker.finished.connect(self.worker_thread.quit)
-        self.worker.finished.connect(self.worker.deleteLater)
-        self.worker_thread.finished.connect(self.worker_thread.deleteLater)
-        self.worker_thread.finished.connect(self._cleanup_thread_references)
+        _ = self.worker.finished.connect(self.worker_thread.quit)
+        _ = self.worker.finished.connect(self.worker.deleteLater)
+        _ = self.worker_thread.finished.connect(self.worker_thread.deleteLater)
+        _ = self.worker_thread.finished.connect(self._cleanup_thread_references)
 
         self.worker_thread.start()
 
-    def _handle_finished(self, raw_schedule: list, final_cost: float):
+    def _handle_finished(self, raw_schedule: list[ScheduleItem], final_cost: float):
         log.info(f"Optimasi Selesai. Cost: {final_cost}")
         try:
             # 1. Simpan hasil mentah ke Database fisik (SQLite)
@@ -259,7 +279,7 @@ class JadwalModel(QAbstractTableModel):
 
         self.beginResetModel()
 
-        temp_filtered = []
+        temp_filtered: list[Jadwal] = []
         for item in self._data:
             # Logic Filter Tipe (Teori/Praktek/Semua)
             match_tipe = True
@@ -280,10 +300,137 @@ class JadwalModel(QAbstractTableModel):
         self._filtered = temp_filtered
         self.endResetModel()
 
-    @Slot(str, str)
+    @Slot(str, str)  # pyright: ignore[reportAny]
     def filter(self, query: str, tipe: str) -> None:
         self.fnFilter(query, tipe)
 
+    @Slot(str, str)  # pyright: ignore[reportAny]
+    def exportToPdf(self, file_url: str, tipe: str):
+        """
+        Mengekspor jadwal ke PDF.
+        file_url: Path file dari FileDialog QML (format file:///...)
+        tipe: 'teori' atau 'praktek'
+        """
+        try:
+            # 1. Konversi URL QML ke Path Lokal OS
+            file_path: str = QUrl(file_url).toLocalFile()
+            if not file_path:
+                # Fallback jika QUrl gagal (misal di OS tertentu stringnya raw)
+                file_path = file_url.replace("file://", "")
+
+            # Tambahkan ekstensi .pdf jika belum ada
+            if not file_path.lower().endswith(".pdf"):
+                file_path += ".pdf"
+
+            log.info(f"Mengekspor PDF ke: {file_path}")
+
+            # 2. Siapkan Data (Filter & Sort)
+            # Kita gunakan logika filter manual agar tidak mengganggu tampilan tabel utama
+            target_tipe: str = tipe.lower().strip()
+            data_export: list[Jadwal] = []
+
+            # Ambil data dari source utama (self._data)
+            for item in self._data:
+                # Filter Tipe
+                if target_tipe == "teori" and item.getJenis().lower() != "teori":
+                    continue
+                if target_tipe == "praktek" and item.getJenis().lower() != "praktek":
+                    continue
+                data_export.append(item)
+
+            # Sort: Hari -> Jam
+            data_export.sort(key=lambda x: (Hari.getId(x.getHari()), x.getJam()))
+
+            # 3. Buat Dokumen PDF (Landscape agar muat banyak kolom)
+            doc = SimpleDocTemplate(file_path, pagesize=landscape(A4))
+            elements: list[Flowable] = []
+            styles = getSampleStyleSheet()
+
+            # Judul
+            judul_text: str = f"Jadwal Kuliah - {tipe.capitalize()}"
+            elements.append(Paragraph(judul_text, styles["Title"]))
+            elements.append(Spacer(1, 20))
+
+            # Header Tabel
+            table_data: list[list[str]] = [
+                [
+                    "Hari",
+                    "Jam",
+                    "Mata Kuliah",
+                    # "SKS",
+                    "Kls",
+                    "Ruangan",
+                    "Pengajar",
+                    # "Ket",
+                ]
+            ]
+
+            # Isi Tabel
+            for item in data_export:
+                lokasi: str = "Online" if item.getDaring() else item.getRuangan()
+                row: list[str] = [
+                    item.getHari(),
+                    item.getJam(),
+                    item.getMatakuliah(),
+                    # str(item.getSks()),
+                    item.getKelas(),
+                    lokasi,
+                    item.getPengajar(),
+                    # item.getJenis().capitalize(),
+                ]
+                table_data.append(row)
+
+            # 4. Styling Tabel ReportLab
+            # (Lebar kolom disesuaikan secara proporsional)
+            # col_widths: list[int] = [50, 80, 200, 30, 30, 80, 150, 50]
+            col_widths: list[int] = [50, 80, 200, 30, 80, 300]
+
+            t = Table(table_data, colWidths=col_widths)
+            t.setStyle(
+                TableStyle(
+                    [
+                        (
+                            "BACKGROUND",
+                            (0, 0),
+                            (-1, 0),
+                            colors.grey,
+                        ),  # Header warna abu
+                        (
+                            "TEXTCOLOR",
+                            (0, 0),
+                            (-1, 0),
+                            colors.whitesmoke,
+                        ),  # Text Header putih
+                        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                        ("FONTSIZE", (0, 0), (-1, 0), 10),
+                        ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                        (
+                            "BACKGROUND",
+                            (0, 1),
+                            (-1, -1),
+                            colors.beige,
+                        ),  # Baris data warna beige
+                        ("GRID", (0, 0), (-1, -1), 1, colors.black),  # Garis tabel
+                        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                        ("FONTSIZE", (0, 1), (-1, -1), 8),  # Font isi lebih kecil
+                    ]
+                )
+            )
+
+            elements.append(t)
+
+            # 5. Build
+            doc.build(elements)
+
+            self.optimizationFinished.emit(
+                True, f"PDF berhasil disimpan di:\n{file_path}"
+            )
+
+        except Exception as e:
+            log.error(f"Gagal ekspor PDF: {str(e)}")
+            self.optimizationFinished.emit(False, f"Gagal ekspor PDF: {str(e)}")
+
     def loadDatabase(self) -> None:
-        semua_jadwal = self.db.get_all_jadwal()
+        semua_jadwal: list[Jadwal] = self.db.get_all_jadwal()
         self.setAllData(semua_jadwal)

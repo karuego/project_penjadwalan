@@ -2,7 +2,7 @@ from result.result import Result
 from result import Result, Ok, Err
 import sqlite3
 import typing
-from typing import Literal
+from typing import Literal, override
 from PySide6.QtCore import (
     QAbstractListModel,
     QByteArray,
@@ -27,7 +27,7 @@ class RuanganModel(QAbstractListModel):
         self.db: Database = db
         self._data: list[Ruangan] = []
 
-    @typing.override
+    @override
     def data(
         self,
         index: QModelIndex | QPersistentModelIndex,
@@ -53,21 +53,21 @@ class RuanganModel(QAbstractListModel):
             return item.getTipe()
         return None
 
-    @typing.override
+    @override
     def rowCount(
         self,
-        parent: QModelIndex | QPersistentModelIndex | None = None,
+        parent: QModelIndex | QPersistentModelIndex = QModelIndex(),  # pyright: ignore[reportCallInDefaultInitializer]
     ) -> int:
         """
         Mengembalikan jumlah total item dalam model.
         """
-        if parent is None:
-            parent = QModelIndex()
+        if parent.isValid():
+            return 0
 
         return len(self._data)
         # return len(self._filtered)
 
-    @typing.override
+    @override
     def roleNames(self) -> dict[int, QByteArray]:
         """
         Menghubungkan roles dengan nama yang akan digunakan di QML.
@@ -98,7 +98,7 @@ class RuanganModel(QAbstractListModel):
                 # Cek duplikasi nama ruangan
                 query = "SELECT nama FROM ruangan WHERE nama LIKE ?"
                 _ = cursor.execute(query, (ruang.getNama(),))
-                data_lama: str | None = typing.cast(str|None, cursor.fetchone())
+                data_lama: str | None = typing.cast(str | None, cursor.fetchone())
 
                 if data_lama is not None:
                     return Err(f'Ruangan "{ruang.getNama()}" sudah ada.')
@@ -113,7 +113,9 @@ class RuanganModel(QAbstractListModel):
                     log.info("Gagal menambahkan ruangan")
                     return Err("Gagal menambahkan ruangan")
 
-                log.info(f"Ruangan '{ruang.getNama()}' dibuat dengan ID: {id_ruang_baru}")
+                log.info(
+                    f"Ruangan '{ruang.getNama()}' dibuat dengan ID: {id_ruang_baru}"
+                )
                 ruang.setId(id_ruang_baru)
 
                 conn.commit()
@@ -139,11 +141,8 @@ class RuanganModel(QAbstractListModel):
 
     def fnAdd(self, nama: str, is_lab: bool) -> Result[str, str]:
         """Method untuk menambahkan ruangan baru."""
-        tipe: Literal['teori', 'praktek'] = "praktek" if is_lab else "teori"
-        ruang: Ruangan = Ruangan(
-            nama=nama,
-            tipe=tipe
-        )
+        tipe: Literal["teori", "praktek"] = "praktek" if is_lab else "teori"
+        ruang: Ruangan = Ruangan(nama=nama, tipe=tipe)
 
         result: Result[str, str] = self.addToDatabase(ruang)
         if result.is_err():
@@ -162,7 +161,6 @@ class RuanganModel(QAbstractListModel):
         message: str = result.unwrap() if success else result.unwrap_err()
 
         return {"success": success, "message": message}
-
 
     def fnGetIndex(self, index: int) -> Ruangan | None:
         if 0 <= index < len(self._data):
@@ -218,6 +216,7 @@ class RuanganModel(QAbstractListModel):
 
         del self._data[index]
         self.endRemoveRows()
+        return Ok("Ruangan berhasil dihapus.")
 
     @Slot(int)  # pyright: ignore[reportAny]
     def removeId(self, id: int) -> dict[str, bool | str]:

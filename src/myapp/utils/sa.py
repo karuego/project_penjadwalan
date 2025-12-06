@@ -1,10 +1,12 @@
+from myapp.utils.struct_ruangan import Ruangan
+from myapp.utils.schedule_item import ScheduleItem
 import random
 import math
 import copy
 import sqlite3
 import re
 from typing import Callable
-from dataclasses import dataclass, replace
+from dataclasses import replace
 
 # --- IMPORT STRUCT ---
 # Pastikan file-file struct berada dalam satu folder atau package yang bisa diakses
@@ -16,30 +18,12 @@ try:
     from myapp.utils.struct_jadwal import Jadwal
     from myapp.utils.hari import Hari
     from myapp.utils.database import Database
+
+    from myapp.utils.schedule_item import ScheduleItem
 except ImportError as e:
     print(f"Error importing structs: {e}")
     print("Pastikan file struct_*.py dan hari.py ada di direktori yang sama.")
     exit(1)
-
-# --- 1. DEFINISI INTERNAL MODEL (Untuk Algoritma) ---
-
-
-@dataclass
-class ScheduleItem:
-    """
-    Representasi internal untuk satu unit jadwal (Kelas) dalam algoritma SA.
-    Menghubungkan MataKuliah, Kelas spesifik, dan Pengajar.
-    """
-
-    uid: int  # Unique ID untuk algoritma
-    mk: MataKuliah  # Object MataKuliah (Struct)
-    kelas_code: str  # Kode kelas: 'A', 'B', 'C'
-    pengajar: Pengajar  # Object Pengajar (Struct)
-
-    # Variabel Keputusan (Decision Variables)
-    timeslot_index: int  # Index pointer ke list global 'valid_timeslots'
-    ruangan_id: int | None  # ID Ruangan (dari struct Ruangan)
-    is_daring: bool  # Status online/offline
 
 
 # --- VARIABEL GLOBAL ---
@@ -216,7 +200,7 @@ def save_schedule_to_db(schedule: list[ScheduleItem]):
         elif item.ruangan_id:
             ruangan_nama = ruangan_map[item.ruangan_id].getNama()
         else:
-            ruangan_nama = "TBA"
+            ruangan_nama = "Menunggu informasi"
 
         data_to_insert.append(
             (
@@ -247,15 +231,25 @@ def generate_initial_solution() -> list[ScheduleItem]:
     uid_counter = 1
 
     # Pisahkan ID ruangan berdasarkan tipe untuk random picking
-    ruang_teori = [r.getId() for r in global_ruangans if r.getTipe() == "teori"]
-    ruang_praktek = [r.getId() for r in global_ruangans if r.getTipe() == "praktek"]
+    ruang_teori: list[int] = [
+        r.getId() for r in global_ruangans if r.getTipe() == "teori"
+    ]
+    ruang_praktek: list[int] = [
+        r.getId() for r in global_ruangans if r.getTipe() == "praktek"
+    ]
+
+    # Validasi Data Kritis
+    if not ruang_teori:
+        print("WARNING: Tidak ada ruangan jenis 'teori' di Database!")
+    if not ruang_praktek:
+        print("WARNING: Tidak ada ruangan jenis 'praktek' di Database!")
 
     for mk in global_mks:
         # Loop sebanyak jumlah kelas (A, B, C...)
-        num_kelas = mk.getKelas() or 1
-        sks = mk.getSks() or 2
+        num_kelas: int = mk.getKelas() or 1
+        sks: int = mk.getSks() or 2
 
-        valid_slots = valid_start_indices.get(sks, [])
+        valid_slots: list[int] = valid_start_indices.get(sks, [])
         if not valid_slots:
             print(
                 f"CRITICAL: Tidak ada slot waktu valid untuk MK {mk.getNama()} ({sks} SKS)"
@@ -263,29 +257,31 @@ def generate_initial_solution() -> list[ScheduleItem]:
             continue
 
         for i in range(num_kelas):
-            kelas_code = chr(ord("A") + i)
+            kelas_code: str = chr(ord("A") + i)
 
             # Random initial state
-            timeslot_idx = random.choice(valid_slots)
+            timeslot_idx: int = random.choice(valid_slots)
 
             # Tentukan ruangan
-            r_id = None
+            r_id: int | None = None
             daring = False
 
             # Logic: Praktek prioritas offline di lab, Teori bisa online atau kelas
             if mk.getTipe() == "praktek":
+                # Praktek WAJIB Offline. Jika tidak ada lab, ini akan jadi TBA (Issue data)
                 if ruang_praktek:
                     r_id = random.choice(ruang_praktek)
                 else:
-                    daring = True  # Fallback jika lab penuh/tidak ada
+                    # Jangan set daring = True. Biarkan None (TBA) agar user sadar data kurang
+                    pass
             else:
-                # Teori: 10% chance langsung online di awal
-                if random.random() < 0.1:
-                    daring = True
-                elif ruang_teori:
+                # Teori: 30% chance langsung online di awal
+                if ruang_teori and random.random() > 0.3:
                     r_id = random.choice(ruang_teori)
                 else:
-                    daring = True
+                    daring = (
+                        True  # Default ke Online jika random kena atau ruangan kosong
+                    )
 
             item = ScheduleItem(
                 uid=uid_counter,
@@ -309,9 +305,7 @@ def calculate_cost(schedule: list[ScheduleItem]) -> float:
     P_CRITICAL = 1000  # Bentrok Ruangan, Bentrok Pengajar
     P_STUDENT = 100  # Bentrok Mahasiswa (Semester sama, kelas sama)
     P_PREF = 10  # Preferensi Pengajar
-    P_DARING = (
-        5  # Penalti kecil untuk kelas online (agar prefer offline jika memungkinkan)
-    )
+    P_DARING = 5  # Penalti kecil untuk kelas online (agar memprioritaskan offline jika memungkinkan)
 
     # Dictionary untuk tracking collision
     # (ruangan_id, time_index) -> count
@@ -378,7 +372,7 @@ def calculate_cost(schedule: list[ScheduleItem]) -> float:
 def get_neighbor(schedule: list[ScheduleItem]) -> list[ScheduleItem]:
     """Mengubah satu entitas jadwal secara acak."""
     # new_schedule: list[ScheduleItem] = copy.deepcopy(schedule)
-    new_schedule = [replace(item) for item in schedule]
+    new_schedule: list[ScheduleItem] = [replace(item) for item in schedule]
     if not new_schedule:
         return new_schedule
 
@@ -403,21 +397,28 @@ def get_neighbor(schedule: list[ScheduleItem]) -> list[ScheduleItem]:
             item.timeslot_index = random.choice(valid_slots)
 
     elif action < 0.8:
-        # Ganti Ruangan (atau switch daring/luring)
+        # Ganti Ruangan
         if item.mk.getTipe() == "teori":
-            if random.random() < 0.3:  # Chance jadi daring
+            # PERBAIKAN: Naikkan peluang switch ke Online menjadi 50:50
+            # Ini memberi kesempatan algoritma "bernapas" jika ruangan penuh
+            if random.random() < 0.5:
                 item.is_daring = True
                 item.ruangan_id = None
             else:
                 item.is_daring = False
                 if ruang_teori:
                     item.ruangan_id = random.choice(ruang_teori)
+                else:
+                    # Fallback jika tidak ada ruangan teori sama sekali: Paksa Online
+                    item.is_daring = True
         else:
-            # Praktek jarang daring, tapi ganti lab
+            # Praktek hanya boleh ganti Lab, TIDAK BOLEH Online
             if ruang_praktek:
                 item.ruangan_id = random.choice(ruang_praktek)
                 item.is_daring = False
+            # Jika tidak ada ruang praktek, biarkan di state sebelumnya (atau error)
 
+    # TODO: hapus
     else:
         # Swap pengajar (Hanya valid jika ada pengajar lain yang mampu mengampu -
         # Untuk saat ini diskip karena struktur MK mengikat 1 pengajar spesifik di DB Anda)
@@ -544,10 +545,10 @@ def convert_to_struct_objects(schedule: list[ScheduleItem]) -> list[Jadwal]:
             nama_ruangan = "ONLINE"
         elif item.ruangan_id:
             # Ambil nama ruangan dari map global
-            r = ruangan_map.get(item.ruangan_id)
+            r: Ruangan | None = ruangan_map.get(item.ruangan_id)
             nama_ruangan = r.getNama() if r else "Unknown Room"
         else:
-            nama_ruangan = "TBA"
+            nama_ruangan = "Menunggu informasi"
 
         # 3. Pembuatan Objek Jadwal (Sesuai definisi di struct_jadwal.py)
         # Perhatikan: struct Jadwal mewarisi QObject, jadi pastikan QApplication

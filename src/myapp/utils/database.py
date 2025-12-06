@@ -609,14 +609,14 @@ class Database:
     def get_all_jadwal(self) -> list[Jadwal]:
         """Mendapatkan semua data jadwal dari database"""
         with self.get_connection() as conn:
-            cursor = conn.cursor()
+            cursor: sqlite3.Cursor = conn.cursor()
 
             _ = cursor.execute("""
                 SELECT id, hari, jam, matakuliah, jenis, sks, semester, kelas, ruangan, daring, pengajar
                 FROM jadwal ORDER BY matakuliah
             """)
             res: (
-                list[tuple[int, str, str, str, str, int, int, str, int, bool, str]]
+                list[tuple[int, str, str, str, str, int, int, str, str, bool, str]]
                 | None
             ) = cursor.fetchall()
             if not res:
@@ -653,9 +653,9 @@ class Database:
                 (id,),
             )
 
-            res: tuple[str, str, str, str, int, int, str, int, bool, str] | None = (
+            res: tuple[str, str, str, str, int, int, str, str, bool, str] | None = (  # pyright: ignore[reportAny]
                 cursor.fetchone()
-            )  # pyright: ignore[reportAny]
+            )
             if not res:
                 return Err("Entri Jadwal tidak ditemukan")
 
@@ -704,7 +704,7 @@ class Database:
     #             cursor = conn.cursor()
     #             _ = cursor.execute("SELECT id FROM jadwal WHERE id = ?", (id,))
 
-    #             res: int | None = cursor.fetchone()  # pyright: ignore[reportAny]
+    #             res: int | None = cursor.fetchone()
     #             if not res:
     #                 return Err("Entri Jadwal tidak ditemukan di database")
 

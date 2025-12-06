@@ -54,11 +54,11 @@ class WaktuModel(QAbstractListModel):
     @typing.override
     def rowCount(
         self,
-        parent: QModelIndex | QPersistentModelIndex | None = None,  # pyright: ignore[reportRedeclaration]
+        parent: QModelIndex | QPersistentModelIndex = QModelIndex(),  # pyright: ignore[reportCallInDefaultInitializer]
     ) -> int:
         """Mengembalikan jumlah total item dalam model."""
-        if parent is None:
-            parent: QModelIndex = QModelIndex()
+        if parent.isValid():
+            return 0
 
         return len(self._data)
 

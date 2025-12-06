@@ -1,10 +1,12 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Window
-import QtQuick.Layouts
 import QtQuick.Controls.Material
+import QtQuick.Dialogs
+import QtQuick.Layouts
+import QtQuick.Window
 import "../components"
 import Theme
+import Qt.labs.platform as Platform
 
 Page {
     id: root
@@ -22,6 +24,20 @@ Page {
         jadwalModelRef.filter("", root.type);
     }
 
+    FileDialog {
+        id: fileDialog
+        title: "Simpan Jadwal sebagai PDF"
+        currentFolder: Platform.StandardPaths.writableLocation(Platform.StandardPaths.DocumentsLocation)
+        fileMode: FileDialog.SaveFile
+        nameFilters: ["PDF files (*.pdf)"]
+
+        onAccepted: {
+            // Panggil fungsi Python saat user menekan Save
+            // selectedFile berisi URL (file:///...)
+            jadwalModelRef.exportToPdf(selectedFile, root.type);
+        }
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 10
@@ -30,12 +46,29 @@ Page {
         // Search Bar Sederhana
         RowLayout {
             Layout.fillWidth: true
+
             TextField {
                 id: searchField
-                placeholderText: "Cari Matkul / Pengajar..."
+                placeholderText: "Cari Mata Kuliah / Pengajar..."
                 Layout.fillWidth: true
                 onTextChanged: {
                     jadwalModelRef.filter(text, root.type);
+                }
+            }
+
+            // TOMBOL EKSPOR
+            Button {
+                text: "Ekspor PDF"
+                icon.name: "document-save" // Jika menggunakan theme icon
+                flat: false
+                highlighted: true
+                Material.background: Material.Green
+
+                onClicked: {
+                    // Set nama file default otomatis
+                    var timestamp = new Date().toISOString().slice(0, 10);
+                    fileDialog.currentFile = "Jadwal_" + root.type + "_" + timestamp + ".pdf";
+                    fileDialog.open();
                 }
             }
         }
@@ -95,17 +128,29 @@ Page {
 
                     // Lebar Kolom Manual (Bisa disesuaikan per indeks kolom jika mau)
                     columnWidthProvider: function (column) {
-                        // Sembunyikan ID (0) dan Jenis (4)
-                        if (column === 0 || column === 4)
-                            return 0;
+                        // switch (column) {
+                        //     case 0:
+                        //     case 4:  return 0;       // Sembunyikan ID (0) dan Jenis (4)
+                        //     case 1:  return 50;      // Hari
+                        //     case 3:  return 200;     // Mata Kuliah
+                        //     case 5:  return 40;      // SKS
+                        //     case 10: return 150;     // Pengajar
+                        //     default: return 100;
+                        // }
 
-                        // Atur lebar kolom lainnya
-                        if (column === 3)
-                            return 200; // Matakuliah diperlebar
-                        if (column === 10)
-                            return 150; // Pengajar diperlebar
-
-                        return 100; // Default lebar kolom lain (Hari, Jam, SKS, dll)
+                        return {
+                            0: 0      // Sembunyikan ID
+                            ,
+                            4: 0      // Sembunyikan Jenis
+                            ,
+                            1: 50     // Hari
+                            ,
+                            3: 200    // Mata Kuliah
+                            ,
+                            5: 0      // SKS
+                            ,
+                            10: 300     // Pengajar
+                        }[column] ?? 100;
                     }
 
                     delegate: Rectangle {
